@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -26,8 +26,26 @@ const sidebarLinks = [
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(typeof window !== 'undefined' && window.innerWidth >= 1024);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
+
+  // Auto-open sidebar on desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setSidebarOpen(true);
+      } else {
+        setSidebarOpen(false);
+      }
+    };
+
+    // Set initial state
+    handleResize();
+
+    // Listen for resize events
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -78,7 +96,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <Link
                 key={link.href}
                 href={link.href}
-                onClick={() => setSidebarOpen(false)}
+                onClick={() => {
+                  // Only close on mobile
+                  if (window.innerWidth < 1024) {
+                    setSidebarOpen(false);
+                  }
+                }}
               >
                 <div
                   className={`flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 group ${
