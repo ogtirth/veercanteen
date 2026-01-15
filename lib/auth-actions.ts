@@ -76,6 +76,9 @@ export async function login(credentials: unknown): Promise<{
     return { success: true };
   } catch (error: any) {
     console.error("Login error:", error);
+    console.error("Error name:", error?.name);
+    console.error("Error message:", error?.message);
+    console.error("Error cause:", error?.cause);
     
     if (error instanceof z.ZodError) {
       console.error("Zod validation errors:", error.errors);
@@ -83,13 +86,18 @@ export async function login(credentials: unknown): Promise<{
     }
     
     // NextAuth v5 throws errors on failed login
-    if (error?.type === "CredentialsSignin") {
+    if (error?.type === "CredentialsSignin" || error?.name === "CredentialsSignin") {
       return { success: false, error: "Invalid email or password" };
+    }
+
+    // Check for CallbackRouteError which wraps the actual error
+    if (error?.cause?.err?.message) {
+      return { success: false, error: error.cause.err.message };
     }
     
     return {
       success: false,
-      error: "Login failed. Please try again.",
+      error: error?.message || "Login failed. Please try again.",
     };
   }
 }

@@ -12,8 +12,11 @@ const config: NextAuthConfig = {
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
+        console.log("Authorize called with:", credentials?.email);
+        
         if (!credentials?.email || !credentials?.password) {
-          return null;
+          console.log("Missing credentials");
+          throw new Error("Email and password are required");
         }
 
         const user = await prisma.user.findUnique({
@@ -21,7 +24,8 @@ const config: NextAuthConfig = {
         });
 
         if (!user) {
-          return null;
+          console.log("User not found:", credentials.email);
+          throw new Error("Invalid email or password");
         }
 
         const passwordMatch = await compare(
@@ -30,13 +34,16 @@ const config: NextAuthConfig = {
         );
 
         if (!passwordMatch) {
-          return null;
+          console.log("Password mismatch for:", credentials.email);
+          throw new Error("Invalid email or password");
         }
 
         if (!user.isActive) {
-          return null;
+          console.log("User inactive:", credentials.email);
+          throw new Error("Account is deactivated");
         }
 
+        console.log("Login successful for:", credentials.email);
         return {
           id: user.id,
           email: user.email,
