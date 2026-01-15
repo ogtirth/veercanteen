@@ -7,12 +7,64 @@ import {
   updateMenuItem,
   deleteMenuItem,
 } from "@/lib/admin-actions";
-import { Plus, Edit2, Trash2, X, Search, ImageIcon, IndianRupee, Filter } from "lucide-react";
+import { 
+  Plus, 
+  Edit2, 
+  Trash2, 
+  Search, 
+  ImageIcon, 
+  Package,
+  Coffee,
+  UtensilsCrossed,
+  Cake,
+  Sunrise,
+  Cookie,
+  X,
+  Check,
+  Infinity,
+  AlertCircle,
+  Eye,
+  EyeOff
+} from "lucide-react";
 import { toast } from "sonner";
+import { useSounds } from "@/lib/sounds";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface MenuItem {
   id: string;
@@ -26,20 +78,40 @@ interface MenuItem {
   image: string | null;
 }
 
+const categoryIcons: Record<string, any> = {
+  Snacks: Cookie,
+  Beverages: Coffee,
+  Meals: UtensilsCrossed,
+  Desserts: Cake,
+  Breakfast: Sunrise,
+};
+
+const categoryColors: Record<string, string> = {
+  Snacks: "bg-amber-100 text-amber-700",
+  Beverages: "bg-blue-100 text-blue-700",
+  Meals: "bg-green-100 text-green-700",
+  Desserts: "bg-pink-100 text-pink-700",
+  Breakfast: "bg-orange-100 text-orange-700",
+};
+
 export default function AdminMenuPage() {
+  const sounds = useSounds();
   const [items, setItems] = useState<MenuItem[]>([]);
-  const [filteredItems, setFilteredItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
+  const [showDialog, setShowDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
+  const [deletingItem, setDeletingItem] = useState<MenuItem | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     price: "",
     description: "",
     category: "",
-    stock: "",
+    stock: "0",
     unlimitedStock: false,
     isAvailable: true,
     image: "",
@@ -51,17 +123,13 @@ export default function AdminMenuPage() {
     loadItems();
   }, []);
 
-  useEffect(() => {
-    filterItems();
-  }, [items, searchQuery, selectedCategory]);
-
   const loadItems = async () => {
     try {
       const result = await getMenuItems();
       if (result.success && result.data) {
-        setItems(result.data.map(item => ({
+        setItems(result.data.map((item: any) => ({
           ...item,
-          unlimitedStock: (item as any).unlimitedStock || false
+          unlimitedStock: item.unlimitedStock || false
         })));
       }
     } catch (error) {
@@ -71,24 +139,23 @@ export default function AdminMenuPage() {
     }
   };
 
-  const filterItems = () => {
-    let filtered = items;
-    
-    if (searchQuery) {
-      filtered = filtered.filter((item) =>
-        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.description?.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-    
-    if (selectedCategory !== "all") {
-      filtered = filtered.filter((item) => item.category === selectedCategory);
-    }
-    
-    setFilteredItems(filtered);
+  const filteredItems = items.filter((item) => {
+    const matchesSearch =
+      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === "all" || item.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
+  const stats = {
+    total: items.length,
+    available: items.filter(i => i.isAvailable).length,
+    lowStock: items.filter(i => !i.unlimitedStock && i.stock < 5 && i.stock > 0).length,
+    outOfStock: items.filter(i => !i.unlimitedStock && i.stock === 0).length,
   };
 
-  const openModal = (item?: MenuItem) => {
+  const openDialog = (item?: MenuItem) => {
+    sounds.click();
     if (item) {
       setEditingItem(item);
       setFormData({
@@ -108,29 +175,30 @@ export default function AdminMenuPage() {
         price: "",
         description: "",
         category: "",
-        stock: "",
+        stock: "0",
         unlimitedStock: false,
         isAvailable: true,
         image: "",
       });
     }
-    setShowModal(true);
+    setShowDialog(true);
   };
 
-  const closeModal = () => {
-    setShowModal(false);
+  const closeDialog = () => {
+    setShowDialog(false);
     setEditingItem(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
 
     const data = {
       name: formData.name,
       price: parseFloat(formData.price),
       description: formData.description || null,
       category: formData.category || null,
-      stock: parseInt(formData.stock),
+      stock: formData.unlimitedStock ? 9999 : parseInt(formData.stock),
       unlimitedStock: formData.unlimitedStock,
       isAvailable: formData.isAvailable,
       image: formData.image || null,
@@ -145,30 +213,63 @@ export default function AdminMenuPage() {
       }
 
       if (result.success) {
-        toast.success(editingItem ? "Item updated!" : "Item added!");
-        closeModal();
+        sounds.itemSaved();
+        toast.success(editingItem ? "Item updated successfully!" : "Item added successfully!");
+        closeDialog();
         loadItems();
       } else {
+        sounds.error();
         toast.error(result.error || "Operation failed");
       }
     } catch (error) {
+      sounds.error();
+      toast.error("Something went wrong");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openDeleteDialog = (item: MenuItem) => {
+    sounds.click();
+    setDeletingItem(item);
+    setShowDeleteDialog(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deletingItem) return;
+
+    try {
+      const result = await deleteMenuItem(deletingItem.id);
+      if (result.success) {
+        sounds.itemDeleted();
+        toast.success("Item deleted successfully!");
+        setShowDeleteDialog(false);
+        setDeletingItem(null);
+        loadItems();
+      } else {
+        sounds.error();
+        toast.error(result.error || "Delete failed");
+      }
+    } catch (error) {
+      sounds.error();
       toast.error("Something went wrong");
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this item?")) return;
-
+  const toggleAvailability = async (item: MenuItem) => {
     try {
-      const result = await deleteMenuItem(id);
+      const result = await updateMenuItem(item.id, {
+        ...item,
+        isAvailable: !item.isAvailable,
+      });
       if (result.success) {
-        toast.success("Item deleted!");
+        sounds.statusUpdate();
+        toast.success(`${item.name} is now ${!item.isAvailable ? "available" : "unavailable"}`);
         loadItems();
-      } else {
-        toast.error(result.error || "Delete failed");
       }
     } catch (error) {
-      toast.error("Something went wrong");
+      sounds.error();
+      toast.error("Failed to update availability");
     }
   };
 
@@ -186,368 +287,476 @@ export default function AdminMenuPage() {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="animate-slide-up">
           <h1 className="text-3xl font-bold tracking-tight">Menu Management</h1>
           <p className="text-muted-foreground mt-1">
-            Manage your food items and availability
+            Create, edit and manage your food items
           </p>
         </div>
-        <Button onClick={() => openModal()} size="lg" className="gap-2">
+        <Button onClick={() => openDialog()} size="lg" className="gap-2 shadow-lg hover:shadow-xl transition-all">
           <Plus className="w-5 h-5" />
-          Add Item
+          Add New Item
         </Button>
       </div>
 
-      {/* Filters & Stats */}
-      <Card>
-        <CardHeader>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-slide-up" style={{ animationDelay: "50ms" }}>
+        <Card className="hover:shadow-card transition-all">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Package className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{stats.total}</p>
+              <p className="text-sm text-muted-foreground">Total Items</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="hover:shadow-card transition-all">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
+              <Check className="w-6 h-6 text-green-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{stats.available}</p>
+              <p className="text-sm text-muted-foreground">Available</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="hover:shadow-card transition-all">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
+              <AlertCircle className="w-6 h-6 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{stats.lowStock}</p>
+              <p className="text-sm text-muted-foreground">Low Stock</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="hover:shadow-card transition-all">
+          <CardContent className="p-4 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center">
+              <X className="w-6 h-6 text-red-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{stats.outOfStock}</p>
+              <p className="text-sm text-muted-foreground">Out of Stock</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Search and Filter */}
+      <Card className="animate-slide-up" style={{ animationDelay: "100ms" }}>
+        <CardContent className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1 relative">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
-                placeholder="Search menu items..."
+                placeholder="Search items by name or description..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-11"
               />
             </div>
-
-            {/* Category Filter */}
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-4 py-2 h-11 border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent bg-background"
-            >
-              <option value="all">All Categories</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          </div>
-        </CardHeader>
-
-        <CardContent>
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-4 rounded-xl bg-primary/5">
-              <div className="text-3xl font-bold text-primary">{items.length}</div>
-              <div className="text-sm text-muted-foreground mt-1">Total Items</div>
-            </div>
-            <div className="text-center p-4 rounded-xl bg-green-50">
-              <div className="text-3xl font-bold text-green-600">
-                {items.filter((i) => i.isAvailable).length}
-              </div>
-              <div className="text-sm text-muted-foreground mt-1">Available</div>
-            </div>
-            <div className="text-center p-4 rounded-xl bg-amber-50">
-              <div className="text-3xl font-bold text-amber-600">
-                {items.filter((i) => i.stock < 10).length}
-              </div>
-              <div className="text-sm text-muted-foreground mt-1">Low Stock</div>
-            </div>
-            <div className="text-center p-4 rounded-xl bg-red-50">
-              <div className="text-3xl font-bold text-red-600">
-                {items.filter((i) => i.stock === 0).length}
-              </div>
-              <div className="text-sm text-muted-foreground mt-1">Out of Stock</div>
-            </div>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-full md:w-[180px] h-11">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "grid" | "table")} className="hidden md:block">
+              <TabsList>
+                <TabsTrigger value="grid">Grid</TabsTrigger>
+                <TabsTrigger value="table">Table</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
         </CardContent>
       </Card>
 
-      {/* Menu Items Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredItems.map((item) => (
-          <div
-            key={item.id}
-            className="bg-white rounded-2xl overflow-hidden shadow-smooth hover:shadow-card hover:-translate-y-1 transition-all duration-200 animate-slide-up"
-          >
-            {/* Image */}
-            <div className="relative h-48 bg-gradient-to-br from-primary/10 to-primary/5">
-              {item.image ? (
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <ImageIcon className="w-16 h-16 text-muted-foreground/30" />
-                </div>
-              )}
-              
-              {/* Availability Badge */}
-              <div className="absolute top-3 right-3">
-                <Badge variant={item.isAvailable ? "success" : "secondary"}>
-                  {item.isAvailable ? "Available" : "Unavailable"}
-                </Badge>
-              </div>
-
-              {/* Stock Badge */}
-              {item.unlimitedStock ? (
-                <div className="absolute top-3 left-3">
-                  <Badge className="bg-green-500">∞ Unlimited</Badge>
-                </div>
-              ) : (
-                <>
-                  {item.stock < 10 && item.stock > 0 && (
-                    <div className="absolute top-3 left-3">
-                      <Badge variant="warning">Low Stock</Badge>
-                    </div>
-                  )}
-                  {item.stock === 0 && (
-                    <div className="absolute top-3 left-3">
-                      <Badge variant="destructive">Out of Stock</Badge>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-
-            {/* Content */}
-            <div className="p-4 space-y-3">
-              <div>
-                <h3 className="font-bold text-lg mb-1">{item.name}</h3>
-                {item.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {item.description}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1 text-primary font-bold text-xl">
-                  <IndianRupee className="w-5 h-5" />
-                  {item.price}
-                </div>
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Stock:</span>{" "}
-                  <span className="font-semibold">{item.stock}</span>
-                </div>
-              </div>
-
-              {item.category && (
-                <Badge variant="secondary" className="text-xs">
-                  {item.category}
-                </Badge>
-              )}
-
-              {/* Actions */}
-              <div className="flex gap-2 pt-3 border-t">
-                <Button
-                  onClick={() => openModal(item)}
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 gap-2"
-                >
-                  <Edit2 className="w-4 h-4" />
-                  Edit
-                </Button>
-                <Button
-                  onClick={() => handleDelete(item.id)}
-                  variant="destructive"
-                  size="sm"
-                  className="flex-1 gap-2"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Delete
-                </Button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {filteredItems.length === 0 && (
-        <div className="text-center py-16">
-          <div className="text-muted-foreground text-lg">
-            No items found. Add your first menu item!
-          </div>
-        </div>
-      )}
-
-      {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-elevated animate-scale-in">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b sticky top-0 bg-white">
-              <h2 className="text-2xl font-bold">
-                {editingItem ? "Edit Menu Item" : "Add New Item"}
-              </h2>
-              <button
-                onClick={closeModal}
-                className="p-2 hover:bg-secondary rounded-lg transition-colors"
+      {/* Items Display */}
+      {filteredItems.length === 0 ? (
+        <Card className="animate-fade-in">
+          <CardContent className="p-12 text-center">
+            <Package className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2">No items found</h3>
+            <p className="text-muted-foreground mb-4">
+              {searchQuery || selectedCategory !== "all" 
+                ? "Try adjusting your search or filter" 
+                : "Start by adding your first menu item"}
+            </p>
+            {!searchQuery && selectedCategory === "all" && (
+              <Button onClick={() => openDialog()} className="gap-2">
+                <Plus className="w-4 h-4" />
+                Add First Item
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      ) : viewMode === "grid" ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filteredItems.map((item, index) => {
+            const CategoryIcon = categoryIcons[item.category || ""] || Package;
+            const isLowStock = !item.unlimitedStock && item.stock < 5 && item.stock > 0;
+            const isOutOfStock = !item.unlimitedStock && item.stock === 0;
+            
+            return (
+              <Card
+                key={item.id}
+                className={`overflow-hidden hover:shadow-card transition-all duration-200 animate-slide-up ${
+                  !item.isAvailable ? "opacity-60" : ""
+                }`}
+                style={{ animationDelay: `${index * 30}ms` }}
               >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <form onSubmit={handleSubmit} className="p-6 space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {/* Name */}
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold mb-2">
-                    Item Name *
-                  </label>
-                  <Input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    placeholder="e.g., Masala Dosa"
-                  />
-                </div>
-
-                {/* Price */}
-                <div>
-                  <label className="block text-sm font-semibold mb-2">
-                    Price (₹) *
-                  </label>
-                  <Input
-                    type="number"
-                    required
-                    step="0.01"
-                    min="0"
-                    value={formData.price}
-                    onChange={(e) =>
-                      setFormData({ ...formData, price: e.target.value })
-                    }
-                    placeholder="50.00"
-                  />
-                </div>
-
-                {/* Stock */}
-                <div>
-                  <label className="block text-sm font-semibold mb-2">
-                    Stock Quantity *
-                  </label>
-                  <Input
-                    type="number"
-                    required
-                    min="0"
-                    value={formData.stock}
-                    onChange={(e) =>
-                      setFormData({ ...formData, stock: e.target.value })
-                    }
-                    placeholder="100"
-                    disabled={formData.unlimitedStock}
-                  />
-                  <div className="mt-2">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={formData.unlimitedStock}
-                        onChange={(e) =>
-                          setFormData({ ...formData, unlimitedStock: e.target.checked, stock: e.target.checked ? "999999" : "0" })
-                        }
-                        className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
-                      />
-                      <span className="text-sm text-muted-foreground">Unlimited Stock (Tea, Burgers, etc.)</span>
-                    </label>
+                <div className="relative h-40 bg-gradient-to-br from-secondary to-secondary/50">
+                  {item.image ? (
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <CategoryIcon className="w-16 h-16 text-muted-foreground/30" />
+                    </div>
+                  )}
+                  {/* Status Badges */}
+                  <div className="absolute top-2 left-2 flex flex-col gap-1">
+                    {!item.isAvailable && (
+                      <Badge variant="destructive" className="text-xs">Unavailable</Badge>
+                    )}
+                    {item.unlimitedStock && (
+                      <Badge variant="secondary" className="text-xs gap-1">
+                        <Infinity className="w-3 h-3" /> Unlimited
+                      </Badge>
+                    )}
+                    {isLowStock && (
+                      <Badge className="text-xs bg-amber-500">Low Stock</Badge>
+                    )}
+                    {isOutOfStock && (
+                      <Badge variant="destructive" className="text-xs">Out of Stock</Badge>
+                    )}
+                  </div>
+                  {/* Quick Actions */}
+                  <div className="absolute top-2 right-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="secondary" size="sm" className="h-8 w-8 p-0 rounded-full">
+                          <span className="sr-only">Actions</span>
+                          <span className="text-lg">⋮</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openDialog(item)}>
+                          <Edit2 className="w-4 h-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toggleAvailability(item)}>
+                          {item.isAvailable ? (
+                            <>
+                              <EyeOff className="w-4 h-4 mr-2" />
+                              Mark Unavailable
+                            </>
+                          ) : (
+                            <>
+                              <Eye className="w-4 h-4 mr-2" />
+                              Mark Available
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => openDeleteDialog(item)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
-
-                {/* Category */}
-                <div>
-                  <label className="block text-sm font-semibold mb-2">
-                    Category
-                  </label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) =>
-                      setFormData({ ...formData, category: e.target.value })
-                    }
-                    className="w-full px-4 py-3 border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                  >
-                    <option value="">Select category</option>
-                    {categories.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Availability */}
-                <div className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    id="isAvailable"
-                    checked={formData.isAvailable}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        isAvailable: e.target.checked,
-                      })
-                    }
-                    className="w-5 h-5 rounded border-input text-primary focus:ring-2 focus:ring-primary"
-                  />
-                  <label htmlFor="isAvailable" className="font-semibold cursor-pointer">
-                    Available for orders
-                  </label>
-                </div>
-
-                {/* Description */}
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
-                    placeholder="Brief description of the item..."
-                    rows={3}
-                    className="w-full px-4 py-3 border border-input rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
-                  />
-                </div>
-
-                {/* Image URL */}
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold mb-2">
-                    Image URL
-                  </label>
-                  <Input
-                    type="url"
-                    value={formData.image}
-                    onChange={(e) =>
-                      setFormData({ ...formData, image: e.target.value })
-                    }
-                    placeholder="https://example.com/image.jpg"
-                  />
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-3 pt-4">
-                <Button
-                  type="button"
-                  onClick={closeModal}
-                  variant="secondary"
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  className="flex-1"
-                >
-                  {editingItem ? "Update Item" : "Add Item"}
-                </Button>
-              </div>
-            </form>
-          </div>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <h3 className="font-semibold line-clamp-1">{item.name}</h3>
+                      {item.category && (
+                        <Badge variant="secondary" className={`text-xs mt-1 ${categoryColors[item.category] || ""}`}>
+                          {item.category}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="font-bold text-primary text-lg">₹{item.price}</p>
+                  </div>
+                  {item.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                      {item.description}
+                    </p>
+                  )}
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      {item.unlimitedStock ? (
+                        <span className="flex items-center gap-1">
+                          <Infinity className="w-4 h-4" /> Stock
+                        </span>
+                      ) : (
+                        `Stock: ${item.stock}`
+                      )}
+                    </span>
+                    <Switch
+                      checked={item.isAvailable}
+                      onCheckedChange={() => toggleAvailability(item)}
+                      className="data-[state=checked]:bg-green-500"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
+      ) : (
+        <Card className="animate-fade-in">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Item</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead className="text-right">Price</TableHead>
+                <TableHead className="text-right">Stock</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredItems.map((item) => {
+                const isLowStock = !item.unlimitedStock && item.stock < 5 && item.stock > 0;
+                const isOutOfStock = !item.unlimitedStock && item.stock === 0;
+                
+                return (
+                  <TableRow key={item.id} className={!item.isAvailable ? "opacity-60" : ""}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center overflow-hidden">
+                          {item.image ? (
+                            <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <ImageIcon className="w-5 h-5 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium">{item.name}</p>
+                          {item.description && (
+                            <p className="text-xs text-muted-foreground line-clamp-1">{item.description}</p>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {item.category && (
+                        <Badge variant="secondary" className={categoryColors[item.category] || ""}>
+                          {item.category}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right font-medium">₹{item.price}</TableCell>
+                    <TableCell className="text-right">
+                      {item.unlimitedStock ? (
+                        <Badge variant="secondary" className="gap-1">
+                          <Infinity className="w-3 h-3" /> Unlimited
+                        </Badge>
+                      ) : (
+                        <span className={isLowStock ? "text-amber-600" : isOutOfStock ? "text-red-600" : ""}>
+                          {item.stock}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={item.isAvailable}
+                        onCheckedChange={() => toggleAvailability(item)}
+                        className="data-[state=checked]:bg-green-500"
+                      />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={() => openDialog(item)}>
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => openDeleteDialog(item)} className="text-destructive hover:text-destructive">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </Card>
       )}
+
+      {/* Add/Edit Dialog */}
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingItem ? "Edit Item" : "Add New Item"}</DialogTitle>
+            <DialogDescription>
+              {editingItem ? "Update the item details below" : "Fill in the details to add a new menu item"}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Name *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="e.g., Masala Chai"
+                required
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="price">Price (₹) *</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  step="0.01"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  placeholder="0.00"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="category">Category</Label>
+                <Select
+                  value={formData.category}
+                  onValueChange={(v) => setFormData({ ...formData, category: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Brief description of the item..."
+                rows={2}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="image">Image URL</Label>
+              <Input
+                id="image"
+                type="url"
+                value={formData.image}
+                onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                placeholder="https://..."
+              />
+            </div>
+
+            <div className="space-y-4 pt-2 border-t">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Unlimited Stock</Label>
+                  <p className="text-xs text-muted-foreground">
+                    For items like tea, coffee that don&apos;t have fixed quantity
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.unlimitedStock}
+                  onCheckedChange={(checked) => setFormData({ ...formData, unlimitedStock: checked })}
+                />
+              </div>
+
+              {!formData.unlimitedStock && (
+                <div className="space-y-2">
+                  <Label htmlFor="stock">Stock Quantity</Label>
+                  <Input
+                    id="stock"
+                    type="number"
+                    value={formData.stock}
+                    onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                    placeholder="0"
+                  />
+                </div>
+              )}
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Available for Sale</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Toggle to show/hide this item from menu
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.isAvailable}
+                  onCheckedChange={(checked) => setFormData({ ...formData, isAvailable: checked })}
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button type="button" variant="outline" onClick={closeDialog}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    Saving...
+                  </>
+                ) : editingItem ? (
+                  "Update Item"
+                ) : (
+                  "Add Item"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Item</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete &quot;{deletingItem?.name}&quot;? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

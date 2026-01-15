@@ -1,159 +1,153 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import {
-  LayoutDashboard,
-  UtensilsCrossed,
-  ShoppingBag,
-  Users,
-  CreditCard,
-  Settings,
-  Menu,
-  X,
-  ChevronRight
+import { 
+  LayoutDashboard, 
+  UtensilsCrossed, 
+  ShoppingBag, 
+  Users, 
+  Settings, 
+  Store,
+  ChevronLeft,
+  ChevronRight,
+  Menu
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-const sidebarLinks = [
+const sidebarItems = [
   { href: "/admin", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/admin/menu", icon: UtensilsCrossed, label: "Menu Items" },
   { href: "/admin/orders", icon: ShoppingBag, label: "Orders" },
+  { href: "/admin/counter", icon: Store, label: "Counter" },
   { href: "/admin/users", icon: Users, label: "Users" },
-  { href: "/admin/counter", icon: CreditCard, label: "Counter" },
   { href: "/admin/settings", icon: Settings, label: "Settings" },
 ];
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
 
-  // Auto-open sidebar on desktop
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth >= 1024) {
-        setSidebarOpen(true);
-      } else {
-        setSidebarOpen(false);
-      }
-    };
-
-    // Set initial state
-    handleResize();
-
-    // Listen for resize events
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-secondary/30">
+      {/* Mobile Header */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b shadow-smooth z-50 flex items-center justify-between px-4">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setMobileOpen(!mobileOpen)}
+          >
+            <Menu className="w-5 h-5" />
+          </Button>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/80 rounded-lg flex items-center justify-center">
+              <UtensilsCrossed className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-bold text-lg">Admin Panel</span>
+          </div>
+        </div>
+      </div>
+
       {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
+      {mobileOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden animate-fade-in"
-          onClick={() => setSidebarOpen(false)}
+          className="lg:hidden fixed inset-0 bg-black/50 z-40 animate-fade-in"
+          onClick={() => setMobileOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 z-50 h-screen w-72 bg-white border-r shadow-smooth transform transition-transform duration-300 lg:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={cn(
+          "fixed top-0 left-0 h-full bg-white border-r shadow-smooth z-50 transition-all duration-300",
+          collapsed ? "w-20" : "w-64",
+          mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        )}
       >
-        {/* Sidebar Header */}
-        <div className="p-6 border-b">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center shadow-card">
-                <UtensilsCrossed className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h2 className="font-bold text-lg">Admin Panel</h2>
-                <p className="text-xs text-muted-foreground">Veer Canteen</p>
-              </div>
+        {/* Logo */}
+        <div className="h-16 flex items-center justify-between px-4 border-b">
+          <Link href="/admin" className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-xl flex items-center justify-center shadow-card">
+              <UtensilsCrossed className="w-5 h-5 text-white" />
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="lg:hidden"
-              onClick={() => setSidebarOpen(false)}
-            >
-              <X className="w-5 h-5" />
-            </Button>
-          </div>
+            {!collapsed && (
+              <div className="animate-fade-in">
+                <div className="font-bold text-lg">Veer Canteen</div>
+                <div className="text-xs text-muted-foreground -mt-1">Admin Panel</div>
+              </div>
+            )}
+          </Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="hidden lg:flex"
+            onClick={() => setCollapsed(!collapsed)}
+          >
+            {collapsed ? (
+              <ChevronRight className="w-4 h-4" />
+            ) : (
+              <ChevronLeft className="w-4 h-4" />
+            )}
+          </Button>
         </div>
 
-        {/* Sidebar Navigation */}
+        {/* Navigation */}
         <nav className="p-4 space-y-2">
-          {sidebarLinks.map((link) => {
-            const isActive = pathname === link.href;
-            const Icon = link.icon;
-
+          {sidebarItems.map((item, index) => {
+            const isActive = pathname === item.href;
             return (
               <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => {
-                  // Only close on mobile
-                  if (window.innerWidth < 1024) {
-                    setSidebarOpen(false);
-                  }
-                }}
+                key={item.href}
+                href={item.href}
+                onClick={() => setMobileOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
+                  isActive
+                    ? "bg-primary text-white shadow-card"
+                    : "hover:bg-secondary text-foreground",
+                  "animate-slide-up"
+                )}
+                style={{ animationDelay: `${index * 50}ms` }}
               >
-                <div
-                  className={`flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 group ${
-                    isActive
-                      ? "bg-primary text-white shadow-card"
-                      : "text-gray-700 hover:bg-gray-100"
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <Icon className="w-5 h-5" />
-                    <span className="font-medium">{link.label}</span>
-                  </div>
-                  {isActive && <ChevronRight className="w-4 h-4" />}
-                </div>
+                <item.icon className={cn("w-5 h-5", collapsed && "mx-auto")} />
+                {!collapsed && <span className="font-medium">{item.label}</span>}
               </Link>
             );
           })}
         </nav>
 
-        {/* Back to Store */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-gray-50">
-          <Link href="/">
-            <Button variant="outline" className="w-full justify-start gap-2">
-              <ChevronRight className="w-4 h-4 rotate-180" />
-              Back to Store
-            </Button>
-          </Link>
-        </div>
+        {/* Footer */}
+        {!collapsed && (
+          <div className="absolute bottom-0 left-0 right-0 p-4 border-t">
+            <Link href="/">
+              <Button variant="outline" className="w-full gap-2">
+                <Store className="w-4 h-4" />
+                View Store
+              </Button>
+            </Link>
+          </div>
+        )}
       </aside>
 
       {/* Main Content */}
-      <div className="lg:pl-72">
-        {/* Mobile Header */}
-        <div className="sticky top-0 z-30 bg-white border-b shadow-smooth lg:hidden">
-          <div className="flex items-center justify-between p-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSidebarOpen(true)}
-            >
-              <Menu className="w-5 h-5" />
-            </Button>
-            <h1 className="font-bold text-lg">Admin Panel</h1>
-            <div className="w-10" />
-          </div>
+      <main
+        className={cn(
+          "transition-all duration-300 pt-16 lg:pt-0",
+          collapsed ? "lg:ml-20" : "lg:ml-64"
+        )}
+      >
+        <div className="p-6 lg:p-8 min-h-screen">
+          <div className="animate-fade-in">{children}</div>
         </div>
-
-        {/* Page Content */}
-        <main className="p-4 lg:p-8 animate-fade-in">
-          {children}
-        </main>
-      </div>
+      </main>
     </div>
   );
 }

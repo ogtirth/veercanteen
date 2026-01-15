@@ -144,7 +144,8 @@ export async function createWalkInOrder(items: { menuItemId: string; quantity: n
         return { success: false, error: `Menu item not found: ${item.menuItemId}` };
       }
 
-      if (menuItem.stock < item.quantity) {
+      // Skip stock check for unlimited stock items
+      if (!menuItem.unlimitedStock && menuItem.stock < item.quantity) {
         return { success: false, error: `Insufficient stock for ${menuItem.name}` };
       }
 
@@ -216,16 +217,18 @@ export async function confirmWalkInPayment(orderId: string, paymentMethod: strin
       return { success: false, error: "Order is not pending" };
     }
 
-    // Update stock for all items
+    // Update stock for all items (skip unlimited stock items)
     for (const item of order.items) {
-      await prisma.menuItem.update({
-        where: { id: item.menuItemId },
-        data: {
-          stock: {
-            decrement: item.quantity,
+      if (!item.menuItem.unlimitedStock) {
+        await prisma.menuItem.update({
+          where: { id: item.menuItemId },
+          data: {
+            stock: {
+              decrement: item.quantity,
+            },
           },
-        },
-      });
+        });
+      }
     }
 
     // Update order status
@@ -441,7 +444,7 @@ export async function getDashboardStats() {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const [todayOrders, totalRevenue, pendingCount, lowStockItems] =
+    const [todayOrders, totalRevenue, pendingCount, lowStockItems, recentOrders] =
       await Promise.all([
         prisma.order.count({
           where: {
@@ -468,6 +471,13 @@ export async function getDashboardStats() {
         prisma.menuItem.count({
           where: { stock: { lt: 5 } },
         }),
+        prisma.order.findMany({
+          take: 5,
+          orderBy: { createdAt: "desc" },
+          include: {
+            items: true,
+          },
+        }),
       ]);
 
     return {
@@ -477,6 +487,7 @@ export async function getDashboardStats() {
         totalRevenue: totalRevenue._sum.totalAmount || 0,
         pendingCount,
         lowStockItems,
+        recentOrders,
       },
     };
   } catch (error) {
@@ -486,6 +497,245 @@ export async function getDashboardStats() {
         error instanceof Error
           ? error.message
           : "Failed to fetch dashboard stats",
+    };
+  }
+}
+
+// Get Settings
+export async function getSettings() {
+  try {
+    await checkAdmin();
+
+    const settings = await prisma.settings.findMany();
+    const settingsObj: Record<string, string> = {};
+    settings.forEach((s) => {
+      settingsObj[s.key] = s.value;
+    });
+
+    return {
+      success: true,
+      data: {
+        upiId: settingsObj.upiId || "",
+        businessName: settingsObj.businessName || "",
+        phone: settingsObj.phone || "",
+        email: settingsObj.email || "",
+        address: settingsObj.address || "",
+        openingTime: settingsObj.openingTime || "09:00",
+        closingTime: settingsObj.closingTime || "21:00",
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to fetch settings",
+    };
+  }
+}
+
+// Update Settings
+export async function updateSettings(data: {
+  upiId: string;
+  businessName?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  openingTime?: string;
+  closingTime?: string;
+}) {
+  try {
+    await checkAdmin();
+
+    const updates = [
+      { key: "upiId", value: data.upiId },
+      { key: "businessName", value: data.businessName || "" },
+      { key: "phone", value: data.phone || "" },
+      { key: "email", value: data.email || "" },
+      { key: "address", value: data.address || "" },
+      { key: "openingTime", value: data.openingTime || "09:00" },
+      { key: "closingTime", value: data.closingTime || "21:00" },
+    ];
+
+    for (const update of updates) {
+      await prisma.settings.upsert({
+        where: { key: update.key },
+        update: { value: update.value },
+        create: { key: update.key, value: update.value },
+      });
+    }
+
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update settings",
+    };
+  }
+}
+
+// Update User Role
+export async function updateUserRole(userId: string, newRole: string) {
+  try {
+    await checkAdmin();
+
+    const isAdmin = newRole === "admin";
+    await prisma.user.update({
+      where: { id: userId },
+      data: { isAdmin },
+    });
+
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update role",
+    };
+  }
+}
+// Get Comprehensive Analytics
+export async function getAnalytics() {
+  try {
+    await checkAdmin();
+
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // Get all completed orders
+    const allOrders = await prisma.order.findMany({
+      where: {
+        status: { in: ["Paid", "Completed"] },
+      },
+      include: {
+        items: {
+          include: {
+            menuItem: true,
+          },
+        },
+      },
+    });
+
+    // Calculate total revenue and orders
+    const totalRevenue = allOrders.reduce((sum, order) => sum + order.totalAmount, 0);
+    const totalOrders = allOrders.length;
+    const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+    // Top selling items
+    const itemSales: Record<string, { name: string; totalSold: number; revenue: number }> = {};
+    allOrders.forEach((order) => {
+      order.items.forEach((item) => {
+        if (!itemSales[item.menuItemId]) {
+          itemSales[item.menuItemId] = {
+            name: item.name,
+            totalSold: 0,
+            revenue: 0,
+          };
+        }
+        const salesItem = itemSales[item.menuItemId];
+        if (salesItem) {
+          salesItem.totalSold += item.quantity;
+          salesItem.revenue += item.priceAtTime * item.quantity;
+        }
+      });
+    });
+    const topSellingItems = Object.values(itemSales)
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 10);
+
+    // Sales by category
+    const categorySales: Record<string, { category: string; count: number; revenue: number }> = {};
+    allOrders.forEach((order) => {
+      order.items.forEach((item) => {
+        const category = item.menuItem?.category || "Other";
+        if (!categorySales[category]) {
+          categorySales[category] = { category, count: 0, revenue: 0 };
+        }
+        const catItem = categorySales[category];
+        if (catItem) {
+          catItem.count += 1;
+          catItem.revenue += item.priceAtTime * item.quantity;
+        }
+      });
+    });
+    const salesByCategory = Object.values(categorySales).sort((a, b) => b.revenue - a.revenue);
+
+    // Daily revenue for last 7 days
+    const dailyRevenue: { date: string; revenue: number; orders: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+      const dateStr = date.toISOString().split("T")[0] ?? "";
+      const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+      const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+
+      const dayOrders = allOrders.filter(
+        (order) => order.createdAt >= dayStart && order.createdAt < dayEnd
+      );
+      const dayRevenue = dayOrders.reduce((sum, order) => sum + order.totalAmount, 0);
+
+      dailyRevenue.push({
+        date: dateStr,
+        revenue: dayRevenue,
+        orders: dayOrders.length,
+      });
+    }
+
+    // Customer stats
+    const totalCustomers = await prisma.user.count({ where: { isAdmin: false } });
+    const newToday = await prisma.user.count({
+      where: {
+        isAdmin: false,
+        createdAt: { gte: startOfDay },
+      },
+    });
+    const customersWithOrders = await prisma.user.count({
+      where: {
+        isAdmin: false,
+        orders: { some: {} },
+      },
+    });
+
+    // Orders by status
+    const statusCounts = await prisma.order.groupBy({
+      by: ["status"],
+      _count: { status: true },
+    });
+    const ordersByStatus: Record<string, number> = {};
+    statusCounts.forEach((s) => {
+      ordersByStatus[s.status] = s._count.status;
+    });
+
+    // Peak hours (group by hour of day)
+    const peakHours: { hour: number; orders: number }[] = [];
+    const hourCounts: Record<number, number> = {};
+    allOrders.forEach((order) => {
+      const hour = new Date(order.createdAt).getHours();
+      hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+    });
+    for (let h = 0; h < 24; h++) {
+      peakHours.push({ hour: h, orders: hourCounts[h] || 0 });
+    }
+
+    return {
+      success: true,
+      data: {
+        totalOrders,
+        totalRevenue,
+        avgOrderValue,
+        topSellingItems,
+        salesByCategory,
+        dailyRevenue,
+        customerStats: {
+          totalCustomers,
+          newToday,
+          repeatCustomers: customersWithOrders,
+        },
+        ordersByStatus,
+        peakHours,
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to fetch analytics",
     };
   }
 }

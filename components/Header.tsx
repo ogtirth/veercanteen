@@ -24,7 +24,7 @@ export default function Header() {
   const [mounted, setMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const cartItems = useCartStore((state) => state.items);
 
   useEffect(() => {
@@ -33,8 +33,8 @@ export default function Header() {
 
   const handleLogout = async () => {
     await logout();
-    router.push("/");
-    router.refresh();
+    // Hard refresh to clear session
+    window.location.href = "/";
   };
 
   const cartCount = mounted ? cartItems.reduce((sum, item) => sum + item.quantity, 0) : 0;
