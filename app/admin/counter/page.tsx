@@ -166,18 +166,16 @@ export default function CounterPage() {
     try {
       const items = cart.map((c) => ({
         menuItemId: c.menuItem.id,
-        quantity: c.quantity,
-        priceAtTime: c.menuItem.price,
-        name: c.menuItem.name
+        quantity: c.quantity
       }));
 
-      const result = await createWalkInOrder({ items, totalAmount: total });
+      const result = await createWalkInOrder(items);
 
-      if (result.success && result.orderId) {
-        setOrderId(result.orderId);
+      if (result.success && result.data) {
+        setOrderId(result.data.id);
         
         if (paymentMethod === "cash") {
-          await handlePaymentConfirmation(result.orderId);
+          await handlePaymentConfirmation(result.data.id);
         } else {
           setShowPaymentModal(true);
         }
