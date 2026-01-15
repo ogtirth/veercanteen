@@ -3,11 +3,22 @@ import { auth } from "./auth";
 
 export default async function middleware(request: NextRequest) {
   const session = await auth();
+  
+  // Skip API routes
+  if (request.nextUrl.pathname.startsWith("/api")) {
+    return NextResponse.next();
+  }
 
   // Admin routes protection
   if (request.nextUrl.pathname.startsWith("/admin")) {
-    if (!session || !(session.user as any)?.isAdmin) {
-      return NextResponse.redirect(new URL("/login", request.url));
+    if (!session?.user) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("callbackUrl", request.nextUrl.pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+    
+    if (!(session.user as any)?.isAdmin) {
+      return NextResponse.redirect(new URL("/", request.url));
     }
   }
 
