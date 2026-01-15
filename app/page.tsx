@@ -83,9 +83,9 @@ export default function Home() {
           <div className="absolute inset-0 bg-gradient-to-br from-orange-50 via-white to-amber-50" />
           
           <div 
-            className="absolute inset-0 opacity-30"
+            className="absolute inset-0 opacity-20 transition-all duration-300 ease-out"
             style={{
-              background: `radial-gradient(circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(249, 115, 22, 0.3) 0%, transparent 50%)`,
+              background: `radial-gradient(600px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(249, 115, 22, 0.15) 0%, transparent 100%)`,
             }}
           />
 
@@ -181,7 +181,7 @@ export default function Home() {
           <div className="container relative">
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-5xl font-bold mb-4">
-                Why Students <span className="text-orange-500">Love</span> Us
+                Why <span className="text-orange-500">Choose</span> Us
               </h2>
               <p className="text-gray-500 text-lg max-w-2xl mx-auto">
                 We are not just a canteen. We are your daily food companion.
@@ -233,7 +233,7 @@ export default function Home() {
                 🔥 Popular Picks
               </span>
               <h2 className="text-3xl md:text-5xl font-bold mb-4">
-                Student Favorites
+                Customer Favorites
               </h2>
             </div>
 
@@ -241,8 +241,8 @@ export default function Home() {
               {[
                 { emoji: "☕", name: "Masala Chai", price: "₹15", tag: "Best Seller" },
                 { emoji: "🥪", name: "Veg Sandwich", price: "₹30", tag: "Quick Bite" },
-                { emoji: "🍔", name: "Burger", price: "₹50", tag: "Popular" },
-                { emoji: "🍳", name: "Omelette", price: "₹25", tag: "Breakfast" },
+                { emoji: "�", name: "Pizza", price: "₹50", tag: "Popular" },
+                { emoji: "🥤", name: "Cold Coffee", price: "₹40", tag: "Refreshing" },
               ].map((item, i) => (
                 <div
                   key={i}
@@ -282,7 +282,7 @@ export default function Home() {
               Ready to Order?
             </h2>
             <p className="text-xl text-white/80 mb-8 max-w-2xl mx-auto">
-              Join hundreds of students who save time and enjoy great food every day.
+              Join hundreds of happy customers who save time and enjoy great food every day.
             </p>
             <Link
               href="/menu"
@@ -299,7 +299,7 @@ export default function Home() {
             <div className="flex flex-col md:flex-row justify-between items-center gap-6">
               <div className="text-center md:text-left">
                 <h3 className="text-2xl font-bold mb-2">Veer Canteen</h3>
-                <p className="text-gray-400">Fueling students since 2024</p>
+                <p className="text-gray-400">Serving delicious food since 2024</p>
               </div>
               <div className="flex gap-8 text-sm text-gray-400">
                 <Link href="/menu" className="hover:text-white transition-colors">Menu</Link>
@@ -307,7 +307,7 @@ export default function Home() {
                 <Link href="/register" className="hover:text-white transition-colors">Register</Link>
               </div>
               <div className="text-gray-400 text-sm">
-                Made with ❤️ for hungry students
+                Made with ❤️ for food lovers
               </div>
             </div>
           </div>

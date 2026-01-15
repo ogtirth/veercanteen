@@ -20,6 +20,8 @@ export default async function middleware(request: NextRequest) {
     if (!(session.user as any)?.isAdmin) {
       return NextResponse.redirect(new URL("/", request.url));
     }
+    
+    return NextResponse.next();
   }
 
   // Protected routes (user must be logged in)
@@ -29,7 +31,9 @@ export default async function middleware(request: NextRequest) {
     )
   ) {
     if (!session) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("callbackUrl", request.nextUrl.pathname);
+      return NextResponse.redirect(loginUrl);
     }
   }
 

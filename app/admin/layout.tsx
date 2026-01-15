@@ -26,15 +26,8 @@ const sidebarLinks = [
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(typeof window !== 'undefined' && window.innerWidth >= 1024);
   const pathname = usePathname();
-
-  // Auto-open sidebar on desktop
-  useState(() => {
-    if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
-      setSidebarOpen(true);
-    }
-  });
 
   return (
     <div className="min-h-screen bg-gray-50">
