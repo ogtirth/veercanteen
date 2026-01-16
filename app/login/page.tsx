@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import { login } from "@/lib/auth-actions";
@@ -26,9 +26,23 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/menu";
+  
+  // Get callback URL, decode it if needed, default to /menu
+  const rawCallback = searchParams.get("callbackUrl");
+  const callbackUrl = rawCallback ? decodeURIComponent(rawCallback) : "/menu";
+  
+  // Extract just the pathname if it's a full URL
+  const getRedirectPath = (url: string) => {
+    try {
+      const parsed = new URL(url);
+      return parsed.pathname;
+    } catch {
+      return url.startsWith("/") ? url : "/" + url;
+    }
+  };
+  
+  const redirectPath = getRedirectPath(callbackUrl);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,14 +53,14 @@ function LoginForm() {
 
       if (result.success) {
         toast.success("Welcome back!");
-        // Use full page reload to ensure cookies are properly set
-        window.location.href = callbackUrl;
+        // Hard reload to ensure session is fresh
+        window.location.replace(redirectPath);
       } else {
         toast.error(result.error || "Login failed");
+        setLoading(false);
       }
     } catch (error) {
       toast.error("An error occurred");
-    } finally {
       setLoading(false);
     }
   };

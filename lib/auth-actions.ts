@@ -4,6 +4,7 @@ import { signIn, signOut } from "@/auth";
 import prisma from "@/lib/prisma";
 import { hash } from "bcryptjs";
 import { z } from "zod";
+import { AuthError } from "next-auth";
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -23,7 +24,6 @@ export async function register(data: unknown): Promise<{
   try {
     const parsed = registerSchema.parse(data);
 
-    // Check if user exists
     const existing = await prisma.user.findUnique({
       where: { email: parsed.email },
     });
@@ -32,10 +32,8 @@ export async function register(data: unknown): Promise<{
       return { success: false, error: "User already exists" };
     }
 
-    // Hash password
     const hashedPassword = await hash(parsed.password, 10);
 
-    // Create user
     await prisma.user.create({
       data: {
         email: parsed.email,
@@ -62,43 +60,30 @@ export async function login(credentials: unknown): Promise<{
   error?: string;
 }> {
   try {
-    console.log("Login called with:", credentials);
     const parsed = loginSchema.parse(credentials);
-    console.log("Parsed credentials:", parsed);
 
-    const result = await signIn("credentials", {
+    await signIn("credentials", {
       email: parsed.email,
       password: parsed.password,
       redirect: false,
     });
 
-    console.log("SignIn result:", result);
     return { success: true };
-  } catch (error: any) {
-    console.error("Login error:", error);
-    console.error("Error name:", error?.name);
-    console.error("Error message:", error?.message);
-    console.error("Error cause:", error?.cause);
-    
+  } catch (error) {
     if (error instanceof z.ZodError) {
-      console.error("Zod validation errors:", error.errors);
       return { success: false, error: "Invalid input" };
     }
     
-    // NextAuth v5 throws errors on failed login
-    if (error?.type === "CredentialsSignin" || error?.name === "CredentialsSignin") {
-      return { success: false, error: "Invalid email or password" };
-    }
-
-    // Check for CallbackRouteError which wraps the actual error
-    if (error?.cause?.err?.message) {
-      return { success: false, error: error.cause.err.message };
+    if (error instanceof AuthError) {
+      switch (error.type) {
+        case "CredentialsSignin":
+          return { success: false, error: "Invalid email or password" };
+        default:
+          return { success: false, error: "Login failed" };
+      }
     }
     
-    return {
-      success: false,
-      error: error?.message || "Login failed. Please try again.",
-    };
+    return { success: false, error: "Login failed" };
   }
 }
 
