@@ -71,12 +71,32 @@ const config: NextAuthConfig = {
       }
       return session;
     },
+    async authorized({ auth, request }) {
+      const isLoggedIn = !!auth?.user;
+      const isAdmin = (auth?.user as any)?.isAdmin;
+      const { pathname } = request.nextUrl;
+
+      // Admin routes require admin role
+      if (pathname.startsWith("/admin")) {
+        if (!isLoggedIn) return false;
+        if (!isAdmin) return Response.redirect(new URL("/", request.nextUrl));
+        return true;
+      }
+
+      // Protected routes require login
+      if (["/cart", "/checkout", "/my-orders", "/profile"].includes(pathname)) {
+        return isLoggedIn;
+      }
+
+      return true;
+    },
   },
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60,
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
+  trustHost: true,
 };
 
 export const { handlers, auth, signIn, signOut } = NextAuth(config) as any;
