@@ -17,25 +17,42 @@ export async function GET() {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
 
-    // Get total revenue
+    // Get total revenue (ALL orders except Cancelled - real business logic)
     const totalRevenue = await prisma.order.aggregate({
       _sum: {
         totalAmount: true,
       },
       where: {
-        status: { in: ["Completed", "Ready"] },
+        status: { not: "Cancelled" },
+      },
+    });
+
+    // Get today's revenue
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayRevenue = await prisma.order.aggregate({
+      _sum: {
+        totalAmount: true,
+      },
+      where: {
+        status: { not: "Cancelled" },
+        createdAt: { gte: today },
       },
     });
 
     // Get total orders
-    const totalOrders = await prisma.order.count();
+    const totalOrders = await prisma.order.count({
+      where: { status: { not: "Cancelled" } },
+    });
 
     // Get orders by status
     const pendingOrders = await prisma.order.count({ where: { status: "Pending" } });
+    const preparingOrders = await prisma.order.count({ where: { status: "Preparing" } });
     const readyOrders = await prisma.order.count({ where: { status: "Ready" } });
     const completedOrders = await prisma.order.count({ where: { status: "Completed" } });
+    const cancelledOrders = await prisma.order.count({ where: { status: "Cancelled" } });
 
-    // Get top selling products
+    // Get top selling products (from all non-cancelled orders)
     const topProducts = await prisma.orderItem.groupBy({
       by: ['menuItemId'],
       _sum: {
@@ -43,6 +60,11 @@ export async function GET() {
       },
       _count: {
         menuItemId: true,
+      },
+      where: {
+        order: {
+          status: { not: "Cancelled" },
+        },
       },
       orderBy: {
         _sum: {
@@ -80,7 +102,7 @@ export async function GET() {
         createdAt: {
           gte: sevenDaysAgo,
         },
-        status: { in: ["Completed", "Ready"] },
+        status: { not: "Cancelled" },
       },
       orderBy: {
         createdAt: 'asc',
@@ -125,10 +147,13 @@ export async function GET() {
       success: true,
       data: {
         totalRevenue: totalRevenue._sum.totalAmount || 0,
+        todayRevenue: todayRevenue._sum.totalAmount || 0,
         totalOrders,
         pendingOrders,
+        preparingOrders,
         readyOrders,
         completedOrders,
+        cancelledOrders,
         topProducts: topProductsWithDetails,
         revenueData,
         recentOrders: recentOrders.map(order => ({

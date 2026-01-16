@@ -469,17 +469,19 @@ export async function getDashboardStats() {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    const [todayOrders, totalRevenue, pendingCount, lowStockItems, recentOrders] =
+    const [todayOrders, todayRevenue, totalRevenue, pendingCount, lowStockItems, recentOrders] =
       await Promise.all([
+        // Today's orders (all except cancelled)
         prisma.order.count({
           where: {
             createdAt: {
               gte: today,
               lt: tomorrow,
             },
-            status: "Paid",
+            status: { not: "Cancelled" },
           },
         }),
+        // Today's revenue (all except cancelled)
         prisma.order.aggregate({
           _sum: { totalAmount: true },
           where: {
@@ -487,14 +489,24 @@ export async function getDashboardStats() {
               gte: today,
               lt: tomorrow,
             },
-            status: "Paid",
+            status: { not: "Cancelled" },
+          },
+        }),
+        // Total revenue (all time, all except cancelled - real business logic)
+        prisma.order.aggregate({
+          _sum: { totalAmount: true },
+          where: {
+            status: { not: "Cancelled" },
           },
         }),
         prisma.order.count({
           where: { status: "Pending" },
         }),
         prisma.menuItem.count({
-          where: { stock: { lt: 5 } },
+          where: { 
+            stock: { lt: 5 },
+            unlimitedStock: false,
+          },
         }),
         prisma.order.findMany({
           take: 5,
@@ -509,6 +521,7 @@ export async function getDashboardStats() {
       success: true,
       data: {
         todayOrders,
+        todayRevenue: todayRevenue._sum.totalAmount || 0,
         totalRevenue: totalRevenue._sum.totalAmount || 0,
         pendingCount,
         lowStockItems,
@@ -626,10 +639,10 @@ export async function getAnalytics() {
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    // Get all completed orders
+    // Get all orders except cancelled (real business logic - revenue counts for all orders)
     const allOrders = await prisma.order.findMany({
       where: {
-        status: { in: ["Paid", "Completed"] },
+        status: { not: "Cancelled" },
       },
       include: {
         items: {

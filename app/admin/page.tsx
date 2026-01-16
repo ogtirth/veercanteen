@@ -36,6 +36,7 @@ import {
 
 interface Stats {
   todayOrders: number;
+  todayRevenue: number;
   totalRevenue: number;
   pendingCount: number;
   lowStockItems: number;
@@ -154,10 +155,9 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Today&apos;s Revenue</p>
-                <p className="text-3xl font-bold text-primary">₹{stats?.totalRevenue?.toLocaleString() || 0}</p>
-                <p className="text-xs text-green-600 flex items-center gap-1 mt-1">
-                  <TrendingUp className="w-3 h-3" />
-                  +{growthRate}% from yesterday
+                <p className="text-3xl font-bold text-primary">₹{stats?.todayRevenue?.toLocaleString() || 0}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {stats?.todayOrders || 0} orders today
                 </p>
               </div>
               <div className="w-14 h-14 rounded-2xl bg-primary/20 flex items-center justify-center">
@@ -167,12 +167,30 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
+        <Card className="hover:shadow-card transition-all bg-gradient-to-br from-green-500/5 to-green-500/10 border-green-500/20">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Total Revenue</p>
+                <p className="text-3xl font-bold text-green-600">₹{stats?.totalRevenue?.toLocaleString() || 0}</p>
+                <p className="text-xs text-green-600 flex items-center gap-1 mt-1">
+                  <TrendingUp className="w-3 h-3" />
+                  All time earnings
+                </p>
+              </div>
+              <div className="w-14 h-14 rounded-2xl bg-green-100 flex items-center justify-center">
+                <TrendingUp className="w-7 h-7 text-green-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card className="hover:shadow-card transition-all">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Today&apos;s Orders</p>
-                <p className="text-3xl font-bold">{stats?.todayOrders || 0}</p>
+                <p className="text-sm text-muted-foreground">Total Orders</p>
+                <p className="text-3xl font-bold">{analytics?.totalOrders || 0}</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {stats?.pendingCount || 0} pending
                 </p>
@@ -190,30 +208,12 @@ export default function AdminDashboard() {
               <div>
                 <p className="text-sm text-muted-foreground">Avg Order Value</p>
                 <p className="text-3xl font-bold">₹{avgOrderValue.toFixed(0)}</p>
-                <p className="text-xs text-green-600 flex items-center gap-1 mt-1">
-                  <TrendingUp className="w-3 h-3" />
-                  +5% this week
-                </p>
-              </div>
-              <div className="w-14 h-14 rounded-2xl bg-green-100 flex items-center justify-center">
-                <Target className="w-7 h-7 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-card transition-all">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Customers</p>
-                <p className="text-3xl font-bold">{analytics?.customerStats?.totalCustomers || 0}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  +{analytics?.customerStats?.newToday || 0} new today
+                  {analytics?.customerStats?.totalCustomers || 0} customers
                 </p>
               </div>
               <div className="w-14 h-14 rounded-2xl bg-purple-100 flex items-center justify-center">
-                <Users className="w-7 h-7 text-purple-600" />
+                <Target className="w-7 h-7 text-purple-600" />
               </div>
             </div>
           </CardContent>
