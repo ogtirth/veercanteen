@@ -8,6 +8,7 @@ import { useCartStore } from "@/lib/cart-store";
 import { logout } from "@/lib/auth-actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ThemeToggle } from "./ThemeToggle";
 import { 
   ShoppingCart, 
   LogOut, 
@@ -41,7 +42,7 @@ export default function Header() {
   const isAdmin = session?.user && (session.user as any).isAdmin;
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 shadow-smooth">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shadow-smooth">
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
@@ -92,7 +93,10 @@ export default function Header() {
           </nav>
 
           {/* Right Side Actions */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2">
+            {/* Theme Toggle */}
+            <ThemeToggle />
+            
             {session ? (
               <>
                 {/* Cart */}

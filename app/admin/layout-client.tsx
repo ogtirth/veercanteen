@@ -15,6 +15,7 @@ import {
   Menu
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { cn } from "@/lib/utils";
 
 const sidebarItems = [
@@ -38,7 +39,7 @@ export default function AdminLayoutClient({
   return (
     <div className="min-h-screen bg-secondary/30">
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b shadow-smooth z-50 flex items-center justify-between px-4">
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-background border-b shadow-smooth z-50 flex items-center justify-between px-4">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -54,6 +55,7 @@ export default function AdminLayoutClient({
             <span className="font-bold text-lg">Admin Panel</span>
           </div>
         </div>
+        <ThemeToggle />
       </div>
 
       {/* Mobile Sidebar Overlay */}
@@ -67,7 +69,7 @@ export default function AdminLayoutClient({
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed top-0 left-0 h-full bg-white border-r shadow-smooth z-50 transition-all duration-300",
+          "fixed top-0 left-0 h-full bg-background border-r shadow-smooth z-50 transition-all duration-300",
           collapsed ? "w-20" : "w-64",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
@@ -85,18 +87,20 @@ export default function AdminLayoutClient({
               </div>
             )}
           </Link>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="hidden lg:flex"
-            onClick={() => setCollapsed(!collapsed)}
-          >
-            {collapsed ? (
-              <ChevronRight className="w-4 h-4" />
-            ) : (
-              <ChevronLeft className="w-4 h-4" />
-            )}
-          </Button>
+          <div className="hidden lg:flex items-center gap-1">
+            <ThemeToggle />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setCollapsed(!collapsed)}
+            >
+              {collapsed ? (
+                <ChevronRight className="w-4 h-4" />
+              ) : (
+                <ChevronLeft className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* Navigation */}

@@ -80,7 +80,7 @@ export default function Home() {
       <main className="overflow-hidden">
         {/* Hero Section */}
         <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-orange-50 via-white to-amber-50" />
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-50 via-background to-amber-50 dark:from-background dark:via-background dark:to-background" />
           
           <div 
             className="absolute inset-0 opacity-20 transition-all duration-300 ease-out"
@@ -101,12 +101,12 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="absolute top-20 left-10 w-72 h-72 bg-orange-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob" />
-          <div className="absolute top-40 right-10 w-72 h-72 bg-yellow-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000" />
-          <div className="absolute bottom-20 left-1/2 w-72 h-72 bg-pink-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000" />
+          <div className="absolute top-20 left-10 w-72 h-72 bg-orange-200 dark:bg-orange-900/30 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-30 animate-blob" />
+          <div className="absolute top-40 right-10 w-72 h-72 bg-yellow-200 dark:bg-yellow-900/30 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-30 animate-blob animation-delay-2000" />
+          <div className="absolute bottom-20 left-1/2 w-72 h-72 bg-pink-200 dark:bg-pink-900/30 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-3xl opacity-30 animate-blob animation-delay-4000" />
 
           <div className="container relative z-10 text-center space-y-8 py-20">
-            <div className="inline-flex items-center gap-2 bg-white/80 backdrop-blur-sm border border-orange-200 rounded-full px-4 py-2 text-sm font-medium text-orange-600 animate-bounce-slow shadow-lg">
+            <div className="inline-flex items-center gap-2 bg-background/80 backdrop-blur-sm border border-orange-200 dark:border-orange-800 rounded-full px-4 py-2 text-sm font-medium text-orange-600 dark:text-orange-400 animate-bounce-slow shadow-lg">
               <Sparkles className="w-4 h-4" />
               Now serving fresh & hot!
             </div>
@@ -117,12 +117,12 @@ export default function Home() {
                   Veer Canteen
                 </span>
               </h1>
-              <div className="text-2xl md:text-3xl font-semibold text-gray-700">
+              <div className="text-2xl md:text-3xl font-semibold text-foreground/80">
                 <TypewriterText text="Taste the difference. Feel the love." />
               </div>
             </div>
 
-            <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed animate-fade-in-up">
+            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed animate-fade-in-up">
               From quick bites to hearty meals — freshly prepared, always delicious. 
               Order in seconds, enjoy in minutes.
             </p>
@@ -139,7 +139,7 @@ export default function Home() {
               </Link>
               <Link
                 href="/register"
-                className="inline-flex items-center justify-center gap-2 bg-white border-2 border-orange-200 text-orange-600 px-8 py-4 rounded-2xl font-semibold text-lg hover:border-orange-400 hover:bg-orange-50 transition-all duration-300 hover:scale-105 shadow-lg"
+                className="inline-flex items-center justify-center gap-2 bg-background border-2 border-orange-200 dark:border-orange-800 text-orange-600 dark:text-orange-400 px-8 py-4 rounded-2xl font-semibold text-lg hover:border-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/50 transition-all duration-300 hover:scale-105 shadow-lg"
               >
                 Get Started Free
               </Link>
@@ -150,19 +150,19 @@ export default function Home() {
                 <div className="text-4xl md:text-5xl font-black text-orange-500">
                   <CountUpNumber end={500} suffix="+" />
                 </div>
-                <div className="text-sm text-gray-500 font-medium">Happy Customers</div>
+                <div className="text-sm text-muted-foreground font-medium">Happy Customers</div>
               </div>
               <div className="text-center">
                 <div className="text-4xl md:text-5xl font-black text-orange-500">
                   <CountUpNumber end={50} suffix="+" />
                 </div>
-                <div className="text-sm text-gray-500 font-medium">Menu Items</div>
+                <div className="text-sm text-muted-foreground font-medium">Menu Items</div>
               </div>
               <div className="text-center">
                 <div className="text-4xl md:text-5xl font-black text-orange-500">
                   <CountUpNumber end={5} suffix=" min" />
                 </div>
-                <div className="text-sm text-gray-500 font-medium">Avg. Prep Time</div>
+                <div className="text-sm text-muted-foreground font-medium">Avg. Prep Time</div>
               </div>
             </div>
           </div>
@@ -175,7 +175,7 @@ export default function Home() {
         </section>
 
         {/* Features Section */}
-        <section className="py-24 bg-white relative">
+        <section className="py-24 bg-background relative">
           <div className="absolute inset-0 bg-[radial-gradient(#f97316_1px,transparent_1px)] [background-size:20px_20px] opacity-[0.03]" />
           
           <div className="container relative">
@@ -183,7 +183,7 @@ export default function Home() {
               <h2 className="text-3xl md:text-5xl font-bold mb-4">
                 Why <span className="text-orange-500">Choose</span> Us
               </h2>
-              <p className="text-gray-500 text-lg max-w-2xl mx-auto">
+              <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
                 We are not just a canteen. We are your daily food companion.
               </p>
             </div>
@@ -211,13 +211,13 @@ export default function Home() {
               ].map((feature, i) => (
                 <div
                   key={i}
-                  className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-gray-100"
+                  className="group relative bg-card rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 border border-border"
                 >
                   <div className={`inline-flex p-4 rounded-2xl bg-gradient-to-r ${feature.gradient} mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
                     <feature.icon className="w-8 h-8 text-white" />
                   </div>
                   <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
-                  <p className="text-gray-500 leading-relaxed">{feature.description}</p>
+                  <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
                   <div className={`absolute inset-0 bg-gradient-to-r ${feature.gradient} opacity-0 group-hover:opacity-5 rounded-3xl transition-opacity duration-300`} />
                 </div>
               ))}
@@ -226,10 +226,10 @@ export default function Home() {
         </section>
 
         {/* Popular Items */}
-        <section className="py-24 bg-gradient-to-b from-orange-50 to-white relative overflow-hidden">
+        <section className="py-24 bg-gradient-to-b from-orange-50 dark:from-orange-950/20 to-background relative overflow-hidden">
           <div className="container">
             <div className="text-center mb-16">
-              <span className="inline-block px-4 py-1 bg-orange-100 text-orange-600 rounded-full text-sm font-semibold mb-4">
+              <span className="inline-block px-4 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded-full text-sm font-semibold mb-4">
                 🔥 Popular Picks
               </span>
               <h2 className="text-3xl md:text-5xl font-bold mb-4">
@@ -241,12 +241,12 @@ export default function Home() {
               {[
                 { emoji: "☕", name: "Masala Chai", price: "₹15", tag: "Best Seller" },
                 { emoji: "🥪", name: "Veg Sandwich", price: "₹30", tag: "Quick Bite" },
-                { emoji: "�", name: "Pizza", price: "₹50", tag: "Popular" },
+                { emoji: "🍕", name: "Pizza", price: "₹50", tag: "Popular" },
                 { emoji: "🥤", name: "Cold Coffee", price: "₹40", tag: "Refreshing" },
               ].map((item, i) => (
                 <div
                   key={i}
-                  className="group relative bg-white rounded-3xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 cursor-pointer"
+                  className="group relative bg-card rounded-3xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-2 cursor-pointer border border-border"
                 >
                   <div className="absolute top-3 right-3">
                     <span className="px-2 py-1 bg-orange-100 text-orange-600 rounded-full text-xs font-medium">
@@ -294,19 +294,19 @@ export default function Home() {
         </section>
 
         {/* Footer */}
-        <footer className="py-12 bg-gray-900 text-white">
+        <footer className="py-12 bg-card border-t">
           <div className="container">
             <div className="flex flex-col md:flex-row justify-between items-center gap-6">
               <div className="text-center md:text-left">
                 <h3 className="text-2xl font-bold mb-2">Veer Canteen</h3>
-                <p className="text-gray-400">Serving delicious food since 2024</p>
+                <p className="text-muted-foreground">Serving delicious food since 2024</p>
               </div>
-              <div className="flex gap-8 text-sm text-gray-400">
-                <Link href="/menu" className="hover:text-white transition-colors">Menu</Link>
-                <Link href="/login" className="hover:text-white transition-colors">Login</Link>
-                <Link href="/register" className="hover:text-white transition-colors">Register</Link>
+              <div className="flex gap-8 text-sm text-muted-foreground">
+                <Link href="/menu" className="hover:text-foreground transition-colors">Menu</Link>
+                <Link href="/login" className="hover:text-foreground transition-colors">Login</Link>
+                <Link href="/register" className="hover:text-foreground transition-colors">Register</Link>
               </div>
-              <div className="text-gray-400 text-sm">
+              <div className="text-muted-foreground text-sm">
                 Made with ❤️ for food lovers
               </div>
             </div>
