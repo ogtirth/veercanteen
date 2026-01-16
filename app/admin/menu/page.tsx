@@ -24,7 +24,9 @@ import {
   Infinity,
   AlertCircle,
   Eye,
-  EyeOff
+  EyeOff,
+  Sparkles,
+  Loader2
 } from "lucide-react";
 import { toast } from "sonner";
 import { useSounds } from "@/lib/sounds";
@@ -106,6 +108,12 @@ export default function AdminMenuPage() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [saving, setSaving] = useState(false);
+  
+  // AI Image Search State
+  const [searchingImages, setSearchingImages] = useState(false);
+  const [imageResults, setImageResults] = useState<Array<{id: string; url: string; thumb: string; alt: string; credit: string}>>([]);
+  const [showImagePicker, setShowImagePicker] = useState(false);
+  
   const [formData, setFormData] = useState({
     name: "",
     price: "",
@@ -271,6 +279,43 @@ export default function AdminMenuPage() {
       sounds.error();
       toast.error("Failed to update availability");
     }
+  };
+
+  // AI Image Search Function
+  const searchForImages = async () => {
+    if (!formData.name.trim()) {
+      toast.error("Please enter a product name first");
+      return;
+    }
+    
+    setSearchingImages(true);
+    setShowImagePicker(true);
+    setImageResults([]);
+    
+    try {
+      const response = await fetch(`/api/search-image?q=${encodeURIComponent(formData.name)}`);
+      const data = await response.json();
+      
+      if (data.success && data.images) {
+        setImageResults(data.images);
+        sounds.click();
+      } else {
+        toast.error("No images found");
+      }
+    } catch (error) {
+      toast.error("Failed to search images");
+      sounds.error();
+    } finally {
+      setSearchingImages(false);
+    }
+  };
+
+  const selectImage = (imageUrl: string) => {
+    setFormData({ ...formData, image: imageUrl });
+    setShowImagePicker(false);
+    setImageResults([]);
+    sounds.itemSaved();
+    toast.success("Image selected!");
   };
 
   if (loading) {
@@ -667,13 +712,100 @@ export default function AdminMenuPage() {
 
             <div className="space-y-2">
               <Label htmlFor="image">Image URL</Label>
-              <Input
-                id="image"
-                type="url"
-                value={formData.image}
-                onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                placeholder="https://..."
-              />
+              <div className="flex gap-2">
+                <Input
+                  id="image"
+                  type="url"
+                  value={formData.image}
+                  onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                  placeholder="https://... or click AI Search"
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={searchForImages}
+                  disabled={searchingImages || !formData.name.trim()}
+                  className="gap-2 shrink-0"
+                >
+                  {searchingImages ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="w-4 h-4" />
+                  )}
+                  AI Search
+                </Button>
+              </div>
+              {formData.image && (
+                <div className="mt-2 relative w-20 h-20 rounded-lg overflow-hidden border">
+                  <img 
+                    src={formData.image} 
+                    alt="Preview" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "";
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                </div>
+              )}
+              
+              {/* AI Image Picker */}
+              {showImagePicker && (
+                <div className="mt-3 p-3 border rounded-lg bg-secondary/30">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-sm font-medium flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-primary" />
+                      AI Image Suggestions
+                    </p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowImagePicker(false)}
+                      className="h-6 w-6 p-0"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  
+                  {searchingImages ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="text-center">
+                        <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2 text-primary" />
+                        <p className="text-sm text-muted-foreground">Searching for "{formData.name}"...</p>
+                      </div>
+                    </div>
+                  ) : imageResults.length > 0 ? (
+                    <div className="grid grid-cols-3 gap-2">
+                      {imageResults.map((img) => (
+                        <button
+                          key={img.id}
+                          type="button"
+                          onClick={() => selectImage(img.url)}
+                          className="relative aspect-square rounded-lg overflow-hidden border-2 border-transparent hover:border-primary transition-all hover:scale-105"
+                        >
+                          <img
+                            src={img.thumb || img.url}
+                            alt={img.alt}
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-all flex items-center justify-center">
+                            <Check className="w-6 h-6 text-white opacity-0 hover:opacity-100 drop-shadow-lg" />
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      No images found. Try a different product name.
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-2 text-center">
+                    Click an image to select it
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="space-y-4 pt-2 border-t">
