@@ -496,7 +496,7 @@ export default function CounterPage() {
                     </Button>
                     <Button
                       onClick={() => handleCheckout("upi")}
-                      disabled={processing || cart.length === 0 || !upiId}
+                      disabled={processing || cart.length === 0}
                       className="h-14 flex-col gap-1 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700"
                     >
                       <QrCode className="w-5 h-5" />

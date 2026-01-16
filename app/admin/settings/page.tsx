@@ -70,20 +70,17 @@ export default function SettingsPage() {
   };
 
   const handleSave = async () => {
-    if (!settings.upiId.trim()) {
-      toast.error("UPI ID is required");
-      return;
-    }
-
     setSaving(true);
     try {
       const result = await updateSettings(settings);
       if (result.success) {
         toast.success("Settings saved successfully!");
       } else {
+        console.error("Settings save error:", result.error);
         toast.error(result.error || "Failed to save settings");
       }
     } catch (error) {
+      console.error("Settings save exception:", error);
       toast.error("Something went wrong");
     } finally {
       setSaving(false);
@@ -127,7 +124,7 @@ export default function SettingsPage() {
         <CardContent className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-2">
-              UPI ID <span className="text-destructive">*</span>
+              UPI ID
             </label>
             <div className="relative">
               <QrCode className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />

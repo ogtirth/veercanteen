@@ -559,7 +559,7 @@ export async function getSettings() {
 
 // Update Settings
 export async function updateSettings(data: {
-  upiId: string;
+  upiId?: string;
   businessName?: string;
   phone?: string;
   email?: string;
@@ -571,7 +571,7 @@ export async function updateSettings(data: {
     await checkAdmin();
 
     const updates = [
-      { key: "upiId", value: data.upiId },
+      { key: "upiId", value: data.upiId || "" },
       { key: "businessName", value: data.businessName || "" },
       { key: "phone", value: data.phone || "" },
       { key: "email", value: data.email || "" },
@@ -590,6 +590,7 @@ export async function updateSettings(data: {
 
     return { success: true };
   } catch (error) {
+    console.error("updateSettings error:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to update settings",
