@@ -109,6 +109,7 @@ export default function AdminMenuPage() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   
   // AI Image Search State
   const [searchingImages, setSearchingImages] = useState(false);
@@ -200,6 +201,19 @@ export default function AdminMenuPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate required fields
+    if (!formData.name.trim()) {
+      toast.error("Please enter item name");
+      sounds.error();
+      return;
+    }
+    if (!formData.price || parseFloat(formData.price) <= 0) {
+      toast.error("Please enter a valid price");
+      sounds.error();
+      return;
+    }
+    
     setSaving(true);
 
     const data = {
@@ -317,6 +331,75 @@ export default function AdminMenuPage() {
     setImageResults([]);
     sounds.itemSaved();
     toast.success("Image selected!");
+  };
+
+  // Compress and upload image
+  const handleImageUpload = async (file: File) => {
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB');
+      sounds.error();
+      return;
+    }
+
+    setUploadingImage(true);
+    
+    try {
+      // Create image element to resize
+      const img = document.createElement('img');
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      const loadImage = () => new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = URL.createObjectURL(file);
+      });
+
+      await loadImage();
+      
+      // Resize to max 400x400 for storage efficiency
+      const maxSize = 400;
+      let { width, height } = img;
+      
+      if (width > maxSize || height > maxSize) {
+        if (width > height) {
+          height = (height / width) * maxSize;
+          width = maxSize;
+        } else {
+          width = (width / height) * maxSize;
+          height = maxSize;
+        }
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      ctx?.drawImage(img, 0, 0, width, height);
+      
+      // Convert to base64 with compression
+      const base64 = canvas.toDataURL('image/jpeg', 0.7);
+      
+      // Clean up
+      URL.revokeObjectURL(img.src);
+      
+      setFormData(prev => ({ ...prev, image: base64 }));
+      sounds.itemSaved();
+      toast.success('Image uploaded! Saving...');
+      
+      // Auto-save the item after image upload
+      setTimeout(() => {
+        const form = document.getElementById('menuItemForm') as HTMLFormElement;
+        if (form) {
+          form.requestSubmit();
+        }
+      }, 500);
+      
+    } catch (error) {
+      console.error('Image upload error:', error);
+      toast.error('Failed to upload image. Please try again.');
+      sounds.error();
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   if (loading) {
@@ -657,7 +740,7 @@ export default function AdminMenuPage() {
               {editingItem ? "Update the item details below" : "Fill in the details to add a new menu item"}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form id="menuItemForm" onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Name *</Label>
               <Input
@@ -731,29 +814,25 @@ export default function AdminMenuPage() {
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) {
-                      if (file.size > 2 * 1024 * 1024) {
-                        toast.error('Image must be less than 2MB');
-                        return;
-                      }
-                      const reader = new FileReader();
-                      reader.onload = (event) => {
-                        const base64 = event.target?.result as string;
-                        setFormData({ ...formData, image: base64 });
-                        sounds.itemSaved();
-                        toast.success('Image uploaded!');
-                      };
-                      reader.readAsDataURL(file);
+                      handleImageUpload(file);
                     }
+                    // Reset input so same file can be selected again
+                    e.target.value = '';
                   }}
                 />
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => document.getElementById('imageUpload')?.click()}
+                  disabled={uploadingImage || !formData.name.trim()}
                   className="gap-2 shrink-0"
                 >
-                  <Upload className="w-4 h-4" />
-                  Upload
+                  {uploadingImage ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Upload className="w-4 h-4" />
+                  )}
+                  {uploadingImage ? 'Uploading...' : 'Upload'}
                 </Button>
                 <Button
                   type="button"
