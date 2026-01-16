@@ -26,7 +26,8 @@ import {
   Eye,
   EyeOff,
   Sparkles,
-  Loader2
+  Loader2,
+  Upload
 } from "lucide-react";
 import { toast } from "sonner";
 import { useSounds } from "@/lib/sounds";
@@ -711,16 +712,49 @@ export default function AdminMenuPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="image">Image URL</Label>
+              <Label htmlFor="image">Product Image</Label>
               <div className="flex gap-2">
                 <Input
                   id="image"
                   type="url"
-                  value={formData.image}
+                  value={formData.image.startsWith('data:') ? 'Uploaded image' : formData.image}
                   onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                  placeholder="https://... or click AI Search"
+                  placeholder="URL or upload from device"
                   className="flex-1"
+                  disabled={formData.image.startsWith('data:')}
                 />
+                <input
+                  type="file"
+                  id="imageUpload"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      if (file.size > 2 * 1024 * 1024) {
+                        toast.error('Image must be less than 2MB');
+                        return;
+                      }
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        const base64 = event.target?.result as string;
+                        setFormData({ ...formData, image: base64 });
+                        sounds.itemSaved();
+                        toast.success('Image uploaded!');
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => document.getElementById('imageUpload')?.click()}
+                  className="gap-2 shrink-0"
+                >
+                  <Upload className="w-4 h-4" />
+                  Upload
+                </Button>
                 <Button
                   type="button"
                   variant="outline"
@@ -733,9 +767,20 @@ export default function AdminMenuPage() {
                   ) : (
                     <Sparkles className="w-4 h-4" />
                   )}
-                  AI Search
+                  AI
                 </Button>
               </div>
+              {formData.image.startsWith('data:') && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setFormData({ ...formData, image: '' })}
+                  className="text-xs text-muted-foreground h-6 px-2"
+                >
+                  <X className="w-3 h-3 mr-1" /> Remove uploaded image
+                </Button>
+              )}
               {formData.image && (
                 <div className="mt-2 relative w-20 h-20 rounded-lg overflow-hidden border">
                   <img 
