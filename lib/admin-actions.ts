@@ -162,8 +162,19 @@ export async function createWalkInOrder(items: { menuItemId: string; quantity: n
       });
     }
 
-    // Generate unique invoice number
-    const invoiceNumber = `WI-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+    // Generate simple 6-character order ID
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let orderId = '';
+    for (let i = 0; i < 6; i++) {
+      orderId += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    const invoiceNumber = orderId;
+
+    // Get UPI ID from settings for QR generation
+    const upiSetting = await prisma.settings.findUnique({
+      where: { key: "upiId" },
+    });
+    const upiId = upiSetting?.value || "";
 
     // Create walk-in order (no user associated)
     const order = await prisma.order.create({
@@ -185,7 +196,21 @@ export async function createWalkInOrder(items: { menuItemId: string; quantity: n
       },
     });
 
-    return { success: true, data: order };
+    // Generate UPI QR code URL if UPI ID exists
+    let qrCode = "";
+    if (upiId) {
+      const upiUrl = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent("Veer Canteen")}&am=${totalAmount}&cu=INR&tn=${encodeURIComponent(`Order ${invoiceNumber}`)}`;
+      qrCode = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiUrl)}`;
+    }
+
+    return { 
+      success: true, 
+      data: {
+        ...order,
+        qrCode,
+        upiId,
+      }
+    };
   } catch (error) {
     return {
       success: false,
