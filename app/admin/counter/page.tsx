@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { getMenuItems, createWalkInOrder, confirmWalkInPayment, getSettings } from "@/lib/admin-actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,10 @@ import {
   Smartphone,
   Wallet,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Volume2,
+  VolumeX,
+  Bell
 } from "lucide-react";
 
 interface MenuItem {
@@ -45,6 +48,24 @@ interface CartItem extends MenuItem {
   quantity: number;
 }
 
+interface LiveOrder {
+  id: string;
+  invoiceNumber: string;
+  totalAmount: number;
+  status: string;
+  createdAt: string;
+  user?: {
+    name: string;
+    email: string;
+  };
+  items: Array<{
+    quantity: number;
+    menuItem: {
+      name: string;
+    };
+  }>;
+}
+
 export default function CounterPage() {
   const sounds = useSounds();
   const [items, setItems] = useState<MenuItem[]>([]);
@@ -59,8 +80,95 @@ export default function CounterPage() {
   const [qrCode, setQrCode] = useState<string>("");
   const [upiId, setUpiId] = useState<string>("");
   const [orderCount, setOrderCount] = useState(0);
+  const [liveOrdersEnabled, setLiveOrdersEnabled] = useState(true);
+  const [recentOrders, setRecentOrders] = useState<LiveOrder[]>([]);
+  const [isConnected, setIsConnected] = useState(false);
+  const eventSourceRef = useRef<EventSource | null>(null);
+  const processedOrdersRef = useRef<Set<string>>(new Set());
 
   const categories = ["all", "Snacks", "Beverages", "Meals", "Desserts", "Breakfast"];
+
+  // Handle new order from live feed
+  const handleNewOrder = useCallback((order: LiveOrder) => {
+    // Prevent duplicate processing
+    if (processedOrdersRef.current.has(order.id)) return;
+    processedOrdersRef.current.add(order.id);
+    
+    // Keep only last 100 order IDs to prevent memory leak
+    if (processedOrdersRef.current.size > 100) {
+      const arr = Array.from(processedOrdersRef.current);
+      processedOrdersRef.current = new Set(arr.slice(-50));
+    }
+
+    // Add to recent orders
+    setRecentOrders(prev => [order, ...prev].slice(0, 10));
+    
+    // Play sound and announce
+    if (liveOrdersEnabled) {
+      sounds.announceNewOrder(order.totalAmount, order.invoiceNumber);
+      
+      // Show toast notification
+      const itemsList = order.items.map(i => `${i.quantity}x ${i.menuItem.name}`).join(', ');
+      toast.success(
+        <div className="flex flex-col gap-1">
+          <span className="font-bold">New Order! ₹{order.totalAmount}</span>
+          <span className="text-xs opacity-80">{itemsList}</span>
+          <span className="text-xs opacity-60">#{order.invoiceNumber}</span>
+        </div>,
+        { duration: 5000 }
+      );
+    }
+  }, [liveOrdersEnabled, sounds]);
+
+  // Connect to live orders SSE
+  useEffect(() => {
+    if (!liveOrdersEnabled) {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+        setIsConnected(false);
+      }
+      return;
+    }
+
+    const connectSSE = () => {
+      const eventSource = new EventSource('/api/admin/live-orders');
+      eventSourceRef.current = eventSource;
+
+      eventSource.onopen = () => {
+        setIsConnected(true);
+      };
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'connected') {
+            setIsConnected(true);
+          } else if (data.type === 'new_order') {
+            handleNewOrder(data.order);
+          }
+        } catch (error) {
+          console.error('Error parsing SSE data:', error);
+        }
+      };
+
+      eventSource.onerror = () => {
+        setIsConnected(false);
+        eventSource.close();
+        // Reconnect after 5 seconds
+        setTimeout(connectSSE, 5000);
+      };
+    };
+
+    connectSSE();
+
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+    };
+  }, [liveOrdersEnabled, handleNewOrder]);
 
   useEffect(() => {
     loadItems();
@@ -257,13 +365,59 @@ export default function CounterPage() {
           </div>
         </div>
         
-        {!upiId && (
-          <Badge variant="destructive" className="gap-1">
-            <AlertCircle className="w-3 h-3" />
-            UPI not configured
-          </Badge>
-        )}
+        <div className="flex items-center gap-2">
+          {/* Live Orders Toggle */}
+          <Button
+            variant={liveOrdersEnabled ? "default" : "outline"}
+            size="sm"
+            onClick={() => setLiveOrdersEnabled(!liveOrdersEnabled)}
+            className={`gap-2 ${liveOrdersEnabled ? "bg-green-600 hover:bg-green-700" : ""}`}
+          >
+            {liveOrdersEnabled ? (
+              <>
+                <Volume2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Live</span>
+                {isConnected && (
+                  <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                )}
+              </>
+            ) : (
+              <>
+                <VolumeX className="w-4 h-4" />
+                <span className="hidden sm:inline">Muted</span>
+              </>
+            )}
+          </Button>
+
+          {!upiId && (
+            <Badge variant="destructive" className="gap-1">
+              <AlertCircle className="w-3 h-3" />
+              UPI not configured
+            </Badge>
+          )}
+        </div>
       </div>
+
+      {/* Recent Orders Banner */}
+      {recentOrders.length > 0 && liveOrdersEnabled && (
+        <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 dark:from-green-500/20 dark:to-emerald-500/20 border border-green-500/20 rounded-xl p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Bell className="w-4 h-4 text-green-600" />
+            <span className="text-sm font-medium text-green-700 dark:text-green-400">Recent Online Orders</span>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            {recentOrders.slice(0, 5).map((order) => (
+              <div
+                key={order.id}
+                className="flex-shrink-0 bg-background rounded-lg px-3 py-2 text-sm border shadow-sm"
+              >
+                <div className="font-bold text-primary">₹{order.totalAmount}</div>
+                <div className="text-xs text-muted-foreground">#{order.invoiceNumber.slice(-4)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         {/* Menu Section - 2 columns */}

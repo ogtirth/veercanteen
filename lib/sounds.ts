@@ -136,6 +136,55 @@ class SoundManager {
     this.playTone(880, 0.08, 'sine', 0.15);
     setTimeout(() => this.playTone(880, 0.08, 'sine', 0.12), 150);
   }
+
+  // New order alert - attention grabbing sound
+  newOrderAlert() {
+    // Play a distinctive alert sound
+    this.playTone(880, 0.15, 'sine', 0.3); // A5
+    setTimeout(() => this.playTone(1174.66, 0.15, 'sine', 0.3), 150); // D6
+    setTimeout(() => this.playTone(1318.51, 0.2, 'sine', 0.35), 300); // E6
+    setTimeout(() => this.playTone(1760, 0.3, 'sine', 0.4), 450); // A6
+  }
+
+  // Text-to-speech announcement
+  speak(text: string) {
+    if (!this.isEnabled() || typeof window === 'undefined') return;
+    
+    try {
+      // Cancel any ongoing speech
+      window.speechSynthesis.cancel();
+      
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 1.0;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+      utterance.lang = 'en-IN'; // Indian English
+      
+      // Try to use a good voice
+      const voices = window.speechSynthesis.getVoices();
+      const preferredVoice = voices.find(v => 
+        v.lang.includes('en-IN') || v.lang.includes('en-GB') || v.lang.includes('en-US')
+      );
+      if (preferredVoice) {
+        utterance.voice = preferredVoice;
+      }
+      
+      window.speechSynthesis.speak(utterance);
+    } catch (error) {
+      console.log('Speech synthesis not available');
+    }
+  }
+
+  // Announce new order with amount
+  announceNewOrder(amount: number, invoiceNumber?: string) {
+    this.newOrderAlert();
+    setTimeout(() => {
+      const text = invoiceNumber 
+        ? `New order received. ${amount} rupees. Order number ${invoiceNumber.slice(-4)}.`
+        : `New order received. ${amount} rupees.`;
+      this.speak(text);
+    }, 600);
+  }
 }
 
 // Export singleton instance
@@ -158,6 +207,9 @@ export function useSounds() {
   const itemSaved = useCallback(() => sounds.itemSaved(), []);
   const itemDeleted = useCallback(() => sounds.itemDeleted(), []);
   const notification = useCallback(() => sounds.notification(), []);
+  const newOrderAlert = useCallback(() => sounds.newOrderAlert(), []);
+  const speak = useCallback((text: string) => sounds.speak(text), []);
+  const announceNewOrder = useCallback((amount: number, invoiceNumber?: string) => sounds.announceNewOrder(amount, invoiceNumber), []);
   const setEnabled = useCallback((enabled: boolean) => sounds.setEnabled(enabled), []);
   const isEnabled = useCallback(() => sounds.isEnabled(), []);
 
@@ -175,6 +227,9 @@ export function useSounds() {
     itemSaved,
     itemDeleted,
     notification,
+    newOrderAlert,
+    speak,
+    announceNewOrder,
     setEnabled,
     isEnabled,
   };
