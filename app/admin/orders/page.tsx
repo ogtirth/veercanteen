@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { getAllOrders, updateOrderStatus } from "@/lib/admin-actions";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,9 @@ import {
   RefreshCw,
   Bell,
   Flame,
-  CreditCard
+  CreditCard,
+  Volume2,
+  VolumeX
 } from "lucide-react";
 
 interface Order {
@@ -57,22 +59,15 @@ export default function OrdersPage() {
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
   const [lastOrderCount, setLastOrderCount] = useState(0);
   const [isLive, setIsLive] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
+  const eventSourceRef = useRef<EventSource | null>(null);
+  const processedOrdersRef = useRef<Set<string>>(new Set());
 
   const loadOrders = useCallback(async (showToast = false) => {
     try {
       const result = await getAllOrders();
       if (result.success && result.data) {
         const newOrders = result.data;
-        
-        // Check for new orders
-        if (lastOrderCount > 0 && newOrders.length > lastOrderCount) {
-          const newCount = newOrders.length - lastOrderCount;
-          sounds.notification();
-          toast.success(`🔔 ${newCount} new order${newCount > 1 ? 's' : ''} received!`, {
-            duration: 5000,
-          });
-        }
-        
         setOrders(newOrders);
         setLastOrderCount(newOrders.length);
         
@@ -87,23 +82,95 @@ export default function OrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, [lastOrderCount, sounds]);
+  }, []);
+
+  // Handle new order from SSE
+  const handleNewOrder = useCallback((order: any) => {
+    // Prevent duplicate processing
+    if (processedOrdersRef.current.has(order.id)) return;
+    processedOrdersRef.current.add(order.id);
+    
+    // Keep only last 100 order IDs to prevent memory leak
+    if (processedOrdersRef.current.size > 100) {
+      const arr = Array.from(processedOrdersRef.current);
+      processedOrdersRef.current = new Set(arr.slice(-50));
+    }
+
+    // Play sound and announce
+    sounds.announceNewOrder(order.totalAmount, order.invoiceNumber);
+    
+    // Show toast notification
+    const itemsList = order.items?.map((i: any) => `${i.quantity}x ${i.menuItem?.name || i.name}`).join(', ') || '';
+    toast.success(
+      <div className="flex flex-col gap-1">
+        <span className="font-bold">🔔 New Order! ₹{order.totalAmount}</span>
+        <span className="text-xs opacity-80">{itemsList}</span>
+        <span className="text-xs opacity-60">#{order.invoiceNumber}</span>
+      </div>,
+      { duration: 5000 }
+    );
+
+    // Reload orders to get the new one in the list
+    loadOrders();
+  }, [sounds, loadOrders]);
+
+  // Connect to live orders SSE
+  useEffect(() => {
+    if (!isLive) {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+        setIsConnected(false);
+      }
+      return;
+    }
+
+    const connectSSE = () => {
+      const eventSource = new EventSource('/api/admin/live-orders');
+      eventSourceRef.current = eventSource;
+
+      eventSource.onopen = () => {
+        setIsConnected(true);
+      };
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'connected') {
+            setIsConnected(true);
+          } else if (data.type === 'new_order') {
+            handleNewOrder(data.order);
+          } else if (data.type === 'order_update') {
+            // Refresh orders when status changes
+            loadOrders();
+          }
+        } catch (error) {
+          console.error('Error parsing SSE data:', error);
+        }
+      };
+
+      eventSource.onerror = () => {
+        setIsConnected(false);
+        eventSource.close();
+        // Reconnect after 5 seconds
+        setTimeout(connectSSE, 5000);
+      };
+    };
+
+    connectSSE();
+
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+    };
+  }, [isLive, handleNewOrder, loadOrders]);
 
   // Initial load
   useEffect(() => {
     loadOrders();
-  }, []);
-
-  // Live polling every 5 seconds
-  useEffect(() => {
-    if (!isLive) return;
-    
-    const interval = setInterval(() => {
-      loadOrders();
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [isLive, loadOrders]);
+  }, [loadOrders]);
 
   const handleStatusUpdate = async (orderId: string, newStatus: string) => {
     try {
@@ -163,10 +230,22 @@ export default function OrdersPage() {
             variant={isLive ? "default" : "outline"}
             size="sm"
             onClick={() => setIsLive(!isLive)}
-            className="gap-2"
+            className={`gap-2 ${isLive ? "bg-green-600 hover:bg-green-700" : ""}`}
           >
-            <Bell className={`w-4 h-4 ${isLive ? "animate-pulse" : ""}`} />
-            {isLive ? "Live" : "Paused"}
+            {isLive ? (
+              <>
+                <Volume2 className="w-4 h-4" />
+                Live
+                {isConnected && (
+                  <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                )}
+              </>
+            ) : (
+              <>
+                <VolumeX className="w-4 h-4" />
+                Muted
+              </>
+            )}
           </Button>
           <Button
             variant="outline"
