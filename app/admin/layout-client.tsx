@@ -144,14 +144,38 @@ export default function AdminLayoutClient({
       {/* Main Content */}
       <main
         className={cn(
-          "transition-all duration-300 pt-16 lg:pt-0",
+          "transition-all duration-300 pt-16 lg:pt-0 pb-20 lg:pb-0",
           collapsed ? "lg:ml-20" : "lg:ml-64"
         )}
       >
-        <div className="p-6 lg:p-8 min-h-screen">
+        <div className="p-4 sm:p-6 lg:p-8 min-h-screen">
           <div className="animate-fade-in">{children}</div>
         </div>
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-background border-t shadow-lg z-50 flex items-center justify-around px-2 safe-area-pb">
+        {sidebarItems.slice(0, 5).map((item) => {
+          const isActive = pathname === item.href;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-xl transition-all min-w-[60px]",
+                isActive
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <item.icon className={cn("w-5 h-5", isActive && "text-primary")} />
+              <span className={cn("text-[10px] font-medium", isActive && "text-primary")}>
+                {item.label === "Dashboard" ? "Home" : item.label === "Menu Items" ? "Menu" : item.label}
+              </span>
+            </Link>
+          );
+        })}
+      </nav>
     </div>
   );
 }
