@@ -306,12 +306,12 @@ export default function CounterPage() {
                 <div
                   key={item.id}
                   onClick={() => addToCart(item)}
-                  className={`relative bg-white rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 active:scale-95 overflow-hidden ${
+                  className={`relative bg-card rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 active:scale-95 overflow-hidden ${
                     inCart ? "border-primary shadow-md" : "border-transparent hover:border-primary/30"
                   }`}
                 >
                   {/* Image */}
-                  <div className="relative h-24 bg-gradient-to-br from-orange-50 to-amber-50">
+                  <div className="relative h-24 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30">
                     {item.image ? (
                       <img
                         src={item.image}
@@ -418,7 +418,7 @@ export default function CounterPage() {
                         className="flex items-center gap-3 p-2 rounded-lg bg-secondary/50 hover:bg-secondary transition-colors"
                       >
                         {/* Image */}
-                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-white flex-shrink-0 shadow-sm">
+                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-card flex-shrink-0 shadow-sm">
                           {item.image ? (
                             <img
                               src={item.image}
@@ -426,7 +426,7 @@ export default function CounterPage() {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-50 to-amber-50">
+                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30">
                               <Package className="w-5 h-5 text-muted-foreground/30" />
                             </div>
                           )}
@@ -440,7 +440,7 @@ export default function CounterPage() {
                         </div>
                         
                         {/* Quantity Controls */}
-                        <div className="flex items-center gap-1 bg-white rounded-lg p-1 shadow-sm">
+                        <div className="flex items-center gap-1 bg-background rounded-lg p-1 shadow-sm">
                           <Button
                             variant="ghost"
                             size="icon"
@@ -489,7 +489,7 @@ export default function CounterPage() {
                       onClick={() => handleCheckout("cash")}
                       disabled={processing || cart.length === 0}
                       variant="outline"
-                      className="h-14 flex-col gap-1 border-2 hover:border-green-500 hover:bg-green-50"
+                      className="h-14 flex-col gap-1 border-2 hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-950/30"
                     >
                       <Banknote className="w-5 h-5 text-green-600" />
                       <span className="text-xs font-semibold">Cash</span>
@@ -538,7 +538,7 @@ export default function CounterPage() {
 
             <CardContent className="p-6 space-y-6">
               {/* Amount Display */}
-              <div className="text-center py-4 bg-gradient-to-br from-orange-50 to-amber-50 rounded-2xl">
+              <div className="text-center py-4 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 rounded-2xl">
                 <p className="text-sm text-muted-foreground mb-1">Amount to Collect</p>
                 <p className="text-5xl font-bold text-primary flex items-center justify-center">
                   <IndianRupee className="w-10 h-10" />
@@ -550,7 +550,7 @@ export default function CounterPage() {
               {paymentMethod === "upi" && (
                 <div className="space-y-3">
                   {qrCode ? (
-                    <div className="bg-white p-4 rounded-2xl shadow-inner border-2 border-dashed border-violet-200">
+                    <div className="bg-white dark:bg-white p-4 rounded-2xl shadow-inner border-2 border-dashed border-violet-200">
                       <img 
                         src={qrCode} 
                         alt="UPI QR Code" 
