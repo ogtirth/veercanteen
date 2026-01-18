@@ -205,9 +205,15 @@ export async function GET(request: Request) {
       },
     });
 
+    // Support multiple recipients (comma or semicolon separated)
+    const recipients = settingsMap.reportEmail
+      .split(/[;,]/)
+      .map(e => e.trim())
+      .filter(Boolean);
+
     await transporter.sendMail({
       from: `"${settingsMap.businessName || 'Veer Canteen'}" <${settingsMap.smtpUser}>`,
-      to: settingsMap.reportEmail,
+      to: recipients,
       subject: `📊 Daily Report - ${reportDate} | ₹${totalRevenue.toLocaleString('en-IN')} Revenue`,
       html: emailHtml,
     });
