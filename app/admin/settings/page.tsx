@@ -18,7 +18,9 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
-  Loader2
+  Loader2,
+  Send,
+  FileText
 } from "lucide-react";
 
 interface SettingsData {
@@ -29,6 +31,11 @@ interface SettingsData {
   address: string;
   openingTime: string;
   closingTime: string;
+  reportEmail: string;
+  smtpHost: string;
+  smtpPort: string;
+  smtpUser: string;
+  smtpPass: string;
 }
 
 export default function SettingsPage() {
@@ -40,9 +47,15 @@ export default function SettingsPage() {
     address: "",
     openingTime: "09:00",
     closingTime: "21:00",
+    reportEmail: "",
+    smtpHost: "",
+    smtpPort: "587",
+    smtpUser: "",
+    smtpPass: "",
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [testingEmail, setTestingEmail] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -60,6 +73,11 @@ export default function SettingsPage() {
           address: result.data.address || "",
           openingTime: result.data.openingTime || "09:00",
           closingTime: result.data.closingTime || "21:00",
+          reportEmail: result.data.reportEmail || "",
+          smtpHost: result.data.smtpHost || "",
+          smtpPort: result.data.smtpPort || "587",
+          smtpUser: result.data.smtpUser || "",
+          smtpPass: result.data.smtpPass || "",
         });
       }
     } catch (error) {
@@ -84,6 +102,32 @@ export default function SettingsPage() {
       toast.error("Something went wrong");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleTestEmail = async () => {
+    if (!settings.reportEmail || !settings.smtpHost || !settings.smtpUser || !settings.smtpPass) {
+      toast.error("Please fill in all email settings first");
+      return;
+    }
+
+    setTestingEmail(true);
+    try {
+      const response = await fetch('/api/admin/test-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        toast.success("Test email sent successfully!");
+      } else {
+        toast.error(result.error || "Failed to send test email");
+      }
+    } catch (error) {
+      toast.error("Failed to send test email");
+    } finally {
+      setTestingEmail(false);
     }
   };
 
@@ -232,7 +276,7 @@ export default function SettingsPage() {
       <Card className="animate-slide-up" style={{ animationDelay: "300ms" }}>
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
+            <div className="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
               <Clock className="w-6 h-6 text-purple-600" />
             </div>
             <div>
@@ -271,8 +315,106 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Daily Report Email Settings */}
+      <Card className="animate-slide-up" style={{ animationDelay: "400ms" }}>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+              <FileText className="w-6 h-6 text-orange-600" />
+            </div>
+            <div>
+              <CardTitle>Daily Report Settings</CardTitle>
+              <CardDescription>
+                Receive daily sales report at 12:00 AM IST
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Report Email Address
+            </label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <Input
+                placeholder="owner@example.com"
+                type="email"
+                value={settings.reportEmail}
+                onChange={(e) => setSettings({ ...settings, reportEmail: e.target.value })}
+                className="pl-10"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Daily stats report will be sent to this email at midnight IST
+            </p>
+          </div>
+
+          <div className="border-t pt-4">
+            <p className="text-sm font-medium mb-3">SMTP Configuration</p>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">SMTP Host</label>
+                <Input
+                  placeholder="smtp.gmail.com"
+                  value={settings.smtpHost}
+                  onChange={(e) => setSettings({ ...settings, smtpHost: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">SMTP Port</label>
+                <Input
+                  placeholder="587"
+                  value={settings.smtpPort}
+                  onChange={(e) => setSettings({ ...settings, smtpPort: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">SMTP Username</label>
+                <Input
+                  placeholder="your-email@gmail.com"
+                  value={settings.smtpUser}
+                  onChange={(e) => setSettings({ ...settings, smtpUser: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">SMTP Password</label>
+                <Input
+                  type="password"
+                  placeholder="App password"
+                  value={settings.smtpPass}
+                  onChange={(e) => setSettings({ ...settings, smtpPass: e.target.value })}
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              For Gmail, use an App Password. Go to Google Account → Security → 2-Step Verification → App Passwords
+            </p>
+          </div>
+
+          <Button
+            variant="outline"
+            onClick={handleTestEmail}
+            disabled={testingEmail || !settings.reportEmail}
+            className="gap-2"
+          >
+            {testingEmail ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              <>
+                <Send className="w-4 h-4" />
+                Send Test Email
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Save Button */}
-      <div className="flex justify-end animate-slide-up" style={{ animationDelay: "400ms" }}>
+      <div className="flex justify-end animate-slide-up" style={{ animationDelay: "500ms" }}>
         <Button
           size="lg"
           onClick={handleSave}

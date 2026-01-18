@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useSounds } from "@/lib/sounds";
+import { printReceipt } from "@/lib/print-receipt";
 import {
   Search,
   Plus,
@@ -29,7 +30,8 @@ import {
   AlertCircle,
   Volume2,
   VolumeX,
-  Bell
+  Bell,
+  Printer
 } from "lucide-react";
 
 interface MenuItem {
@@ -83,6 +85,11 @@ export default function CounterPage() {
   const [liveOrdersEnabled, setLiveOrdersEnabled] = useState(true);
   const [recentOrders, setRecentOrders] = useState<LiveOrder[]>([]);
   const [isConnected, setIsConnected] = useState(false);
+  const [businessSettings, setBusinessSettings] = useState<{
+    businessName: string;
+    phone: string;
+    address: string;
+  }>({ businessName: "Veer Canteen", phone: "", address: "" });
   const eventSourceRef = useRef<EventSource | null>(null);
   const processedOrdersRef = useRef<Set<string>>(new Set());
 
@@ -180,6 +187,11 @@ export default function CounterPage() {
       const result = await getSettings();
       if (result.success && result.data) {
         setUpiId(result.data.upiId || "");
+        setBusinessSettings({
+          businessName: result.data.businessName || "Veer Canteen",
+          phone: result.data.phone || "",
+          address: result.data.address || "",
+        });
       }
     } catch (error) {
       console.error("Failed to load settings");
@@ -296,7 +308,7 @@ export default function CounterPage() {
     }
   };
 
-  const handleConfirmPayment = async () => {
+  const handleConfirmPayment = async (shouldPrint: boolean = false) => {
     if (!orderData) return;
 
     setProcessing(true);
@@ -305,6 +317,26 @@ export default function CounterPage() {
       if (result.success) {
         sounds.paymentSuccess();
         toast.success("Payment confirmed!");
+        
+        // Print receipt if requested
+        if (shouldPrint) {
+          printReceipt({
+            invoiceNumber: orderData.invoiceNumber,
+            businessName: businessSettings.businessName,
+            phone: businessSettings.phone,
+            address: businessSettings.address,
+            items: orderData.items.map((item: any) => ({
+              name: item.name,
+              quantity: item.quantity,
+              priceAtTime: item.priceAtTime,
+            })),
+            totalAmount: orderData.totalAmount,
+            paymentMethod: paymentMethod,
+            date: new Date(),
+            isWalkIn: true,
+          });
+        }
+        
         setCart([]);
         setShowPayment(false);
         setOrderData(null);
@@ -741,33 +773,44 @@ export default function CounterPage() {
               </div>
 
               {/* Action Buttons */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={cancelOrder}
+                    disabled={processing}
+                    className="h-12 border-2"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => handleConfirmPayment(false)}
+                    disabled={processing}
+                    className={`h-12 ${
+                      paymentMethod === "cash"
+                        ? "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
+                        : "bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700"
+                    }`}
+                  >
+                    {processing ? (
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                        Confirm
+                      </>
+                    )}
+                  </Button>
+                </div>
                 <Button
+                  onClick={() => handleConfirmPayment(true)}
+                  disabled={processing}
                   variant="outline"
-                  onClick={cancelOrder}
-                  disabled={processing}
-                  className="h-12 border-2"
+                  className="w-full h-11 border-2 border-primary/50 hover:bg-primary/10"
                 >
-                  <X className="w-4 h-4 mr-2" />
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleConfirmPayment}
-                  disabled={processing}
-                  className={`h-12 ${
-                    paymentMethod === "cash"
-                      ? "bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
-                      : "bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700"
-                  }`}
-                >
-                  {processing ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <CheckCircle2 className="w-4 h-4 mr-2" />
-                      Confirm Payment
-                    </>
-                  )}
+                  <Printer className="w-4 h-4 mr-2" />
+                  Confirm & Print Receipt
                 </Button>
               </div>
             </CardContent>

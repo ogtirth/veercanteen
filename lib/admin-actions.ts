@@ -560,6 +560,11 @@ export async function getSettings() {
         address: settingsObj.address || "",
         openingTime: settingsObj.openingTime || "09:00",
         closingTime: settingsObj.closingTime || "21:00",
+        reportEmail: settingsObj.reportEmail || "",
+        smtpHost: settingsObj.smtpHost || "",
+        smtpPort: settingsObj.smtpPort || "587",
+        smtpUser: settingsObj.smtpUser || "",
+        smtpPass: settingsObj.smtpPass || "",
       },
     };
   } catch (error) {
@@ -579,6 +584,11 @@ export async function updateSettings(data: {
   address?: string;
   openingTime?: string;
   closingTime?: string;
+  reportEmail?: string;
+  smtpHost?: string;
+  smtpPort?: string;
+  smtpUser?: string;
+  smtpPass?: string;
 }) {
   try {
     await checkAdmin();
@@ -591,6 +601,11 @@ export async function updateSettings(data: {
       { key: "address", value: data.address || "" },
       { key: "openingTime", value: data.openingTime || "09:00" },
       { key: "closingTime", value: data.closingTime || "21:00" },
+      { key: "reportEmail", value: data.reportEmail || "" },
+      { key: "smtpHost", value: data.smtpHost || "" },
+      { key: "smtpPort", value: data.smtpPort || "587" },
+      { key: "smtpUser", value: data.smtpUser || "" },
+      { key: "smtpPass", value: data.smtpPass || "" },
     ];
 
     for (const update of updates) {
