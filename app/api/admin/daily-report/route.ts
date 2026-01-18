@@ -89,8 +89,8 @@ export async function GET(request: Request) {
             revenue: 0,
           };
         }
-        itemSales[item.menuItemId].quantity += item.quantity;
-        itemSales[item.menuItemId].revenue += item.priceAtTime * item.quantity;
+        itemSales[item.menuItemId]!.quantity += item.quantity;
+        itemSales[item.menuItemId]!.revenue += item.priceAtTime * item.quantity;
       });
     });
 

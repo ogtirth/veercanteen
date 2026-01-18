@@ -1,6 +1,21 @@
 "use client";
 
 import Header from "@/components/Header";
+import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
+// Fallback skeleton for SSR/initial load
+function LandingSkeleton() {
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
+      <Skeleton className="h-10 w-1/2 mb-4" />
+      <SkeletonText lines={3} className="w-2/3" />
+      <div className="flex gap-4 w-full justify-center">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Skeleton key={i} className="h-32 w-32 rounded-xl" />
+        ))}
+      </div>
+    </div>
+  );
+}
 import Link from "next/link";
 import { ArrowRight, Clock, Shield, Sparkles, ChefHat } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -74,6 +89,10 @@ export default function Home() {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, []);
 
+  // Show skeleton for SSR/first load
+  if (typeof window === "undefined") {
+    return <LandingSkeleton />;
+  }
   return (
     <>
       <Header />

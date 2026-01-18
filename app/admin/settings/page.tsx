@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
 import {
   Settings,
   CreditCard,
@@ -133,11 +134,13 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading settings...</p>
-        </div>
+      <div className="space-y-6 max-w-4xl">
+        <Skeleton className="h-8 w-1/3 mb-4" />
+        {Array.from({ length: 3 }).map((_, i) => (
+          <Card key={i} className="p-6 mb-4">
+            <SkeletonText lines={4} />
+          </Card>
+        ))}
       </div>
     );
   }

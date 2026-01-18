@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useSounds } from "@/lib/sounds";
 import { printReceipt } from "@/lib/print-receipt";
+import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
 import {
   Search,
   Plus,
@@ -364,10 +365,29 @@ export default function CounterPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading counter...</p>
+      <div className="space-y-4 pb-6">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-14 w-14 rounded-2xl" />
+          <div>
+            <Skeleton className="h-7 w-40 mb-2" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+          <div className="xl:col-span-2 space-y-4">
+            <Skeleton className="h-10 w-full mb-2" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} className="h-44 w-full" />
+              ))}
+            </div>
+          </div>
+          <div className="xl:col-span-1">
+            <Card className="sticky top-4 border-2 shadow-xl overflow-hidden p-4">
+              <Skeleton className="h-8 w-32 mb-4" />
+              <SkeletonText lines={4} />
+            </Card>
+          </div>
         </div>
       </div>
     );
